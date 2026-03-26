@@ -31,10 +31,10 @@ export default function HomePage() {
       <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
         <div className="max-w-3xl">
           <StatusPill>Conformer input only</StatusPill>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+          <h1 className="theme-text-primary mt-6 text-4xl font-semibold tracking-tight sm:text-6xl">
             Upload a molecular conformer to preview generated crystal structure candidates.
           </h1>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">
+          <p className="theme-text-secondary mt-6 max-w-2xl text-base leading-8 sm:text-lg">
             MolCrystalFlow Demo is a polished research prototype for a future molecular crystal generation platform. Upload a single `.xyz` file to
             walk through the product flow today and review believable, precomputed candidate outputs in demo mode.
           </p>
@@ -42,7 +42,7 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/results/demo-sample"
-              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 text-sm font-medium text-white hover:border-white/20 hover:bg-white/[0.07]"
+              className="theme-button-outline inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium"
             >
               Open sample result
               <ArrowRight className="h-4 w-4" />
@@ -50,7 +50,7 @@ export default function HomePage() {
             <a
               href="/demo/sample_input.xyz"
               download
-              className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-5 py-3 text-sm font-medium text-cyan-100 hover:border-cyan-300/35 hover:bg-cyan-300/15"
+              className="theme-button-accent inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium"
             >
               Download sample `.xyz`
             </a>
@@ -62,11 +62,11 @@ export default function HomePage() {
 
               return (
                 <Panel key={card.title} className="p-5">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-100">
+                  <span className="theme-icon-shell flex h-11 w-11 items-center justify-center rounded-2xl">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <h2 className="mt-5 text-lg font-semibold text-white">{card.title}</h2>
-                  <p className="mt-3 text-sm leading-7 text-slate-400">{card.description}</p>
+                  <h2 className="theme-text-primary mt-5 text-lg font-semibold">{card.title}</h2>
+                  <p className="theme-text-secondary mt-3 text-sm leading-7">{card.description}</p>
                 </Panel>
               );
             })}

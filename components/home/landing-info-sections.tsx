@@ -74,7 +74,7 @@ function ExpandableContent({ id, isOpen, children }: ExpandableContentProps) {
       <div
         ref={contentRef}
         className={cn(
-          "border-t border-white/8 px-5 pb-5 pt-5 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] sm:px-6 sm:pb-6",
+          "border-t border-[color:var(--surface-border)] px-5 pb-5 pt-5 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] sm:px-6 sm:pb-6",
           isOpen ? "translate-y-0 opacity-100 delay-75" : "-translate-y-1.5 opacity-0",
         )}
       >
@@ -101,7 +101,7 @@ function ExpandableInfoSection({
     <Panel
       className={cn(
         "overflow-hidden p-0 transition-[border-color,background-color,box-shadow] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-        isOpen && "border-cyan-300/18 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(255,255,255,0.02)),rgba(8,15,24,0.9)]",
+        isOpen && "theme-panel-open",
       )}
     >
       <button
@@ -114,8 +114,8 @@ function ExpandableInfoSection({
         <div className="flex items-start gap-4">
           <span
             className={cn(
-              "mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-slate-100 transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-              isOpen ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.03]",
+              "mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+              isOpen ? "theme-icon-shell-accent" : "theme-icon-shell",
             )}
           >
             <Icon className="h-5 w-5" />
@@ -123,22 +123,22 @@ function ExpandableInfoSection({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-slate-500">{eyebrow}</p>
-              <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
+              <p className="theme-text-muted text-[11px] font-medium uppercase tracking-[0.24em]">{eyebrow}</p>
+              <span className="theme-chip rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">
                 {tag}
               </span>
             </div>
 
             <div className="mt-3 flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h3 className="text-xl font-semibold text-white sm:text-2xl">{title}</h3>
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400 sm:text-[15px]">{teaser}</p>
+                <h3 className="theme-text-primary text-xl font-semibold sm:text-2xl">{title}</h3>
+                <p className="theme-text-secondary mt-2 max-w-3xl text-sm leading-7 sm:text-[15px]">{teaser}</p>
               </div>
 
               <span
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-slate-300 transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  isOpen && "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                  isOpen ? "theme-icon-shell-accent" : "theme-icon-shell",
                 )}
               >
                 <ChevronDown
@@ -171,17 +171,14 @@ export function LandingInfoSections() {
     <section className="mt-10">
       <div className="max-w-4xl">
         <StatusPill>Reviewer context</StatusPill>
-        <h2 className="mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Scope, status, and deployment path</h2>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
+        <h2 className="theme-text-primary mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">Scope, status, and deployment path</h2>
+        <p className="theme-text-secondary mt-4 max-w-3xl text-sm leading-7 sm:text-base">
           This section is intentionally compact by default. Open any panel to review the current demo scope, the product shell being evaluated now,
           and the planned handoff to real molecular crystal generation infrastructure over time.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           {["Mock research preview", "Desktop or lab execution next", "Cluster optional later", "Capacity-aware rollout"].map((chip) => (
-            <span
-              key={chip}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300"
-            >
+            <span key={chip} className="theme-chip rounded-full px-3 py-1.5 text-xs">
               {chip}
             </span>
           ))}
@@ -201,21 +198,21 @@ export function LandingInfoSections() {
         >
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {workflowSteps.map((step, index) => (
-              <div key={step.id} className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4">
+              <div key={step.id} className="theme-subpanel rounded-[22px] px-4 py-4">
                 <div className="flex items-start gap-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/10 text-sm font-semibold text-cyan-100">
+                  <span className="theme-icon-shell-accent flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold">
                     0{index + 1}
                   </span>
                   <div>
-                    <h4 className="text-sm font-medium text-white">{step.title}</h4>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{step.detail}</p>
+                    <h4 className="theme-text-primary text-sm font-medium">{step.title}</h4>
+                    <p className="theme-text-secondary mt-2 text-sm leading-6">{step.detail}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-7 text-slate-300">
+          <div className="theme-subpanel-soft theme-text-secondary mt-4 rounded-[24px] px-4 py-4 text-sm leading-7">
             The processing page currently uses mock timing and precomputed result packaging. The same stage model can later be driven by real job
             creation, status polling, and artifact retrieval without changing the surrounding interface.
           </div>
@@ -232,23 +229,23 @@ export function LandingInfoSections() {
           onToggle={handleToggle}
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <h4 className="text-lg font-semibold text-white">Scientific framing</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <h4 className="theme-text-primary text-lg font-semibold">Scientific framing</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 The results view is positioned as a research preview of generated crystal structure candidates. It does not imply final ranking,
                 experimental validation, or physically verified output quality.
               </p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <h4 className="text-lg font-semibold text-white">Workflow shell</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <h4 className="theme-text-primary text-lg font-semibold">Workflow shell</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 The demo is validating upload ergonomics, progress communication, result presentation, and overall product tone before the scientific
                 execution layer is introduced.
               </p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5 md:col-span-2 xl:col-span-1">
-              <h4 className="text-lg font-semibold text-white">Extensible foundation</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5 md:col-span-2 xl:col-span-1">
+              <h4 className="theme-text-primary text-lg font-semibold">Extensible foundation</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 Routes, status models, and result types are already shaped to support a future backend swap, so the UI can mature now without forcing a
                 full redesign later.
               </p>
@@ -267,48 +264,48 @@ export function LandingInfoSections() {
           onToggle={handleToggle}
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-cyan-100/70">Current mode</p>
-              <h4 className="mt-3 text-lg font-semibold text-white">Mock research preview</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.22em]">Current mode</p>
+              <h4 className="theme-text-primary mt-3 text-lg font-semibold">Mock research preview</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 Today&apos;s site demonstrates the upload flow, staged workflow, and candidate result presentation using internal mock routes and
                 precomputed outputs.
               </p>
             </div>
 
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-cyan-100/70">Next phase</p>
-              <h4 className="mt-3 text-lg font-semibold text-white">Desktop or lab execution</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.22em]">Next phase</p>
+              <h4 className="theme-text-primary mt-3 text-lg font-semibold">Desktop or lab execution</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 The expected first real backend step is to connect this interface to a local research workstation or laboratory computer that can run
                 generation jobs directly.
               </p>
             </div>
 
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-cyan-100/70">Possible later scaling</p>
-              <h4 className="mt-3 text-lg font-semibold text-white">Cluster-style compute when appropriate</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.22em]">Possible later scaling</p>
+              <h4 className="theme-text-primary mt-3 text-lg font-semibold">Cluster-style compute when appropriate</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 If the workflow and research usage justify it, the execution layer can later be adapted for cluster or HPC-style scheduling rather than
                 being limited to a single machine.
               </p>
             </div>
 
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-cyan-100/70">Expected operating limits</p>
-              <h4 className="mt-3 text-lg font-semibold text-white">User generation may be capacity-bound</h4>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
+            <div className="theme-subpanel rounded-[22px] p-5">
+              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.22em]">Expected operating limits</p>
+              <h4 className="theme-text-primary mt-3 text-lg font-semibold">User generation may be capacity-bound</h4>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
                 Future users should be able to submit conformers and retrieve candidate structures themselves, but availability may depend on compute
                 capacity, queue time, and resource scheduling rather than unrestricted throughput.
               </p>
             </div>
           </div>
 
-          <div className="mt-4 flex items-start gap-4 rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/10 text-cyan-100">
+          <div className="theme-subpanel-soft mt-4 flex items-start gap-4 rounded-[24px] px-4 py-4">
+            <span className="theme-icon-shell-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
               <HardDrive className="h-5 w-5" />
             </span>
-            <p className="text-sm leading-7 text-slate-300">
+            <p className="theme-text-secondary text-sm leading-7">
               The interface is being shaped now so a real execution backend can be introduced later without redesigning the entire product shell. That
               includes the upload contract, status language, result packaging, and the reviewer-facing framing around what the system does and does not
               claim.

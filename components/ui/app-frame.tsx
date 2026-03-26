@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Orbit } from "lucide-react";
 
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { StatusPill } from "@/components/ui/status-pill";
 
 interface AppFrameProps {
@@ -11,25 +12,26 @@ interface AppFrameProps {
 
 export function AppFrame({ children }: AppFrameProps) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--app-bg)] text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(129,140,248,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_32%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-[var(--app-bg)] theme-text-primary">
+      <div className="theme-backdrop pointer-events-none absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 subtle-grid opacity-35" />
-      <header className="relative z-10 border-b border-white/6">
+      <header className="relative z-10 border-b border-[color:var(--header-border)]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
           <Link href="/" className="group inline-flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100 shadow-[0_0_40px_rgba(34,211,238,0.12)]">
+            <span className="theme-icon-shell-accent flex h-11 w-11 items-center justify-center rounded-2xl">
               <Orbit className="h-5 w-5" />
             </span>
             <span>
-              <span className="block text-sm font-semibold tracking-[0.16em] text-white">MolCrystalFlow Demo</span>
-              <span className="block text-xs text-slate-400">Molecular crystal generation research preview</span>
+              <span className="theme-text-primary block text-sm font-semibold tracking-[0.16em]">MolCrystalFlow Demo</span>
+              <span className="theme-text-secondary block text-xs">Molecular crystal generation research preview</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">
             <StatusPill>Demo mode</StatusPill>
+            <ThemeToggle />
             <Link
               href="/results/demo-sample"
-              className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/[0.05] md:inline-flex"
+              className="theme-button-outline hidden items-center gap-2 rounded-full px-4 py-2 text-sm transition md:inline-flex"
             >
               Open sample
               <ArrowUpRight className="h-4 w-4" />

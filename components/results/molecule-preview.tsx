@@ -20,28 +20,31 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
     <Panel className="p-6 sm:p-7">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-100/70">Molecule preview</p>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Conformer geometry signal</h2>
+          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Molecule preview</p>
+          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Conformer geometry signal</h2>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300">
+        <span className="theme-chip rounded-full px-3 py-1 text-xs">
           Coordinate-derived mock visualization
         </span>
       </div>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-4">
-        <div className="absolute inset-4 rounded-[22px] border border-white/6" />
+      <div
+        className="relative overflow-hidden rounded-[28px] border border-[color:var(--surface-border)] p-4"
+        style={{ background: "var(--molecule-surface)" }}
+      >
+        <div className="absolute inset-4 rounded-[22px] border border-[color:var(--molecule-frame-border)]" />
         <svg viewBox="0 0 100 100" className="relative z-10 h-[24rem] w-full">
           <defs>
             <radialGradient id="molHalo" cx="50%" cy="50%" r="60%">
-              <stop offset="0%" stopColor="rgba(34,211,238,0.22)" />
-              <stop offset="100%" stopColor="rgba(34,211,238,0)" />
+              <stop offset="0%" stopColor="var(--molecule-halo-color)" />
+              <stop offset="100%" stopColor="transparent" />
             </radialGradient>
           </defs>
           <rect x="0" y="0" width="100" height="100" fill="url(#molHalo)" opacity="0.8" />
-          <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(148,163,184,0.08)" strokeWidth="0.25" />
-          <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(148,163,184,0.06)" strokeWidth="0.25" />
-          <line x1="10" y1="50" x2="90" y2="50" stroke="rgba(148,163,184,0.05)" strokeWidth="0.25" />
-          <line x1="50" y1="10" x2="50" y2="90" stroke="rgba(148,163,184,0.05)" strokeWidth="0.25" />
+          <circle cx="50" cy="50" r="30" fill="none" stroke="var(--molecule-grid-line)" strokeWidth="0.25" />
+          <circle cx="50" cy="50" r="20" fill="none" stroke="var(--molecule-grid-line)" strokeWidth="0.25" />
+          <line x1="10" y1="50" x2="90" y2="50" stroke="var(--molecule-grid-line)" strokeWidth="0.25" />
+          <line x1="50" y1="10" x2="50" y2="90" stroke="var(--molecule-grid-line)" strokeWidth="0.25" />
 
           {sortedEdges.map((edge) => {
             const source = nodeMap.get(edge.source);
@@ -58,7 +61,7 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
                 y1={source.y}
                 x2={target.x}
                 y2={target.y}
-                stroke="rgba(148, 244, 255, 0.4)"
+                stroke="var(--molecule-edge)"
                 strokeWidth={0.35 + edge.strength * 0.18}
                 strokeLinecap="round"
               />
@@ -76,7 +79,7 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
                   y={node.y + 0.8}
                   textAnchor="middle"
                   fontSize="2.8"
-                  fill="rgba(7,17,25,0.88)"
+                  fill="var(--molecule-label)"
                   style={{ animationDelay: `${index * 120}ms` }}
                 >
                   {node.symbol}
@@ -86,10 +89,10 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
           ))}
         </svg>
         <div className="relative z-10 mt-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">
+          <span className="theme-chip-accent rounded-full px-3 py-1 text-xs">
             Projected from uploaded coordinates
           </span>
-          <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300">
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">
             Visual metaphor for demo review, not a final scientific renderer
           </span>
         </div>

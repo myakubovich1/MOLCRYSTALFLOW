@@ -20,13 +20,13 @@ export function formatZValues(values: number[]) {
 export function accentClassName(accent: CandidatePreview["accent"]) {
   switch (accent) {
     case "violet":
-      return "from-violet-400/20 via-violet-400/8 to-transparent text-violet-100 ring-violet-400/30";
+      return "from-violet-500/18 via-violet-400/8 to-transparent";
     case "emerald":
-      return "from-emerald-400/20 via-emerald-400/8 to-transparent text-emerald-100 ring-emerald-400/30";
+      return "from-emerald-500/18 via-emerald-400/8 to-transparent";
     case "amber":
-      return "from-amber-300/20 via-amber-300/8 to-transparent text-amber-100 ring-amber-300/30";
+      return "from-amber-400/18 via-amber-300/8 to-transparent";
     case "cyan":
     default:
-      return "from-cyan-300/20 via-cyan-300/8 to-transparent text-cyan-100 ring-cyan-300/30";
+      return "from-cyan-500/18 via-cyan-400/8 to-transparent";
   }
 }

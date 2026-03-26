@@ -20,72 +20,72 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <StatusPill>Research preview</StatusPill>
-              <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+              <h1 className="theme-text-primary mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
                 Generated crystal structure candidates ready for review
               </h1>
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+              <p className="theme-text-secondary mt-5 max-w-2xl text-sm leading-7 sm:text-base">
                 MolCrystalFlow Demo accepted the uploaded conformer, staged a mock generation workflow, and returned precomputed output artifacts for
                 interface and product validation.
               </p>
             </div>
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-slate-300">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Completed</div>
-              <div className="mt-3 flex items-center gap-2 font-medium text-white">
-                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+            <div className="theme-subpanel-soft rounded-[24px] px-5 py-4 text-sm">
+              <div className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completed</div>
+              <div className="theme-text-primary mt-3 flex items-center gap-2 font-medium">
+                <CheckCircle2 className="theme-state-success-text h-4 w-4" />
                 {job.completionState}
               </div>
-              <div className="mt-2 text-slate-400">{formatTimestamp(job.receivedAt)}</div>
+              <div className="theme-text-secondary mt-2">{formatTimestamp(job.receivedAt)}</div>
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Input file</p>
-              <p className="mt-2 text-lg font-medium text-white">{job.originalFilename}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input file</p>
+              <p className="theme-text-primary mt-2 text-lg font-medium">{job.originalFilename}</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Formula</p>
-              <p className="mt-2 text-lg font-medium text-white">{job.formula}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Formula</p>
+              <p className="theme-text-primary mt-2 text-lg font-medium">{job.formula}</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Atom count</p>
-              <p className="mt-2 text-lg font-medium text-white">{job.atomCount}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Atom count</p>
+              <p className="theme-text-primary mt-2 text-lg font-medium">{job.atomCount}</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Candidates</p>
-              <p className="mt-2 text-lg font-medium text-white">{job.candidateCount}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Candidates</p>
+              <p className="theme-text-primary mt-2 text-lg font-medium">{job.candidateCount}</p>
             </div>
           </div>
         </Panel>
 
         <Panel className="p-6 sm:p-7">
           <div className="flex items-start gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/10 text-cyan-100">
+            <span className="theme-icon-shell-accent flex h-12 w-12 items-center justify-center rounded-2xl">
               <DatabaseZap className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-100/70">Generation summary</p>
-              <h2 className="mt-3 text-2xl font-semibold text-white">Mock result package</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-400">{job.description}</p>
+              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Generation summary</p>
+              <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Mock result package</h2>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">{job.description}</p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Generation mode</p>
-              <p className="mt-2 text-sm font-medium leading-6 text-white">{job.generationMode}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Generation mode</p>
+              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.generationMode}</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Z values</p>
-              <p className="mt-2 text-sm font-medium leading-6 text-white">{formatZValues(job.zValues)}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Z values</p>
+              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{formatZValues(job.zValues)}</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Input descriptor</p>
-              <p className="mt-2 text-sm font-medium leading-6 text-white">3D molecular conformer received</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input descriptor</p>
+              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">3D molecular conformer received</p>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Completion state</p>
-              <p className="mt-2 text-sm font-medium leading-6 text-white">{job.completionState}</p>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completion state</p>
+              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.completionState}</p>
             </div>
           </div>
         </Panel>
@@ -97,12 +97,12 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
 
           <Panel className="p-6 sm:p-7">
             <div className="mb-5 flex items-start gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-100">
+              <span className="theme-icon-shell flex h-12 w-12 items-center justify-center rounded-2xl">
                 <Sparkles className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-500">Candidate preview</p>
-                <h2 className="mt-3 text-2xl font-semibold text-white">Preview cards</h2>
+                <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Candidate preview</p>
+                <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Preview cards</h2>
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
@@ -116,12 +116,12 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
         <div className="space-y-6">
           <Panel className="p-6 sm:p-7">
             <div className="mb-5 flex items-start gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-100">
+              <span className="theme-icon-shell flex h-12 w-12 items-center justify-center rounded-2xl">
                 <FileBadge2 className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-500">Output artifacts</p>
-                <h2 className="mt-3 text-2xl font-semibold text-white">Downloadable files</h2>
+                <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Output artifacts</p>
+                <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Downloadable files</h2>
               </div>
             </div>
             <div className="space-y-4">
@@ -131,14 +131,14 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
             </div>
           </Panel>
 
-          <Panel className="border-amber-300/20 bg-amber-300/[0.06] p-6">
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-amber-100/80">Scientific disclaimer</p>
-            <p className="mt-4 text-sm leading-7 text-amber-50/90">{job.note}</p>
+          <Panel className="theme-warning-panel p-6">
+            <p className="text-xs font-medium uppercase tracking-[0.24em]">Scientific disclaimer</p>
+            <p className="mt-4 text-sm leading-7">{job.note}</p>
           </Panel>
 
           <Panel className="p-6">
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-500">Upgrade path</p>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
+            <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Upgrade path</p>
+            <p className="theme-text-secondary mt-4 text-sm leading-7">
               The current route and result schema are intentionally shaped so they can later be backed by real job submission, status polling, and
               artifact retrieval from a laboratory workstation or HPC cluster.
             </p>

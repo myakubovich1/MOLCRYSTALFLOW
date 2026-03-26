@@ -88,10 +88,10 @@ export function UploadForm() {
       <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-100/70">Upload conformer</p>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Start a mock generation run</h2>
+          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Upload conformer</p>
+          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Start a mock generation run</h2>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300">1 file only</span>
+        <span className="theme-chip rounded-full px-3 py-1 text-xs">1 file only</span>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -111,18 +111,18 @@ export function UploadForm() {
           className={cn(
             "group flex w-full flex-col items-center justify-center rounded-[26px] border border-dashed px-5 py-11 text-center transition",
             isDragging
-              ? "border-cyan-300/60 bg-cyan-300/10"
-              : "border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]",
+              ? "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)]"
+              : "border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] hover:border-[color:var(--surface-border-strong)] hover:bg-[color:var(--surface-muted)]",
           )}
         >
-          <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+          <span className="theme-icon-shell-accent mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
             {isSubmitting ? <LoaderCircle className="h-7 w-7 animate-spin" /> : <UploadCloud className="h-7 w-7" />}
           </span>
-          <span className="text-lg font-medium text-white">Drop a `.xyz` conformer here</span>
-          <span className="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+          <span className="theme-text-primary text-lg font-medium">Drop a `.xyz` conformer here</span>
+          <span className="theme-text-secondary mt-2 max-w-sm text-sm leading-6">
             The demo accepts one geometry file, extracts lightweight molecular features, and returns precomputed candidate outputs.
           </span>
-          <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-slate-300">
+          <span className="theme-chip mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs">
             <FileUp className="h-3.5 w-3.5" />
             Click to browse
           </span>
@@ -136,36 +136,36 @@ export function UploadForm() {
           onChange={(event) => validateAndSetFile(event.target.files?.[0] ?? null)}
         />
 
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+        <div className="theme-subpanel rounded-2xl px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-white">Selected file</p>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="theme-text-primary text-sm font-medium">Selected file</p>
+              <p className="theme-text-secondary mt-1 text-sm">
                 {selectedFile ? selectedFile.name : "No `.xyz` file selected yet"}
               </p>
             </div>
-            <span className="text-xs text-slate-500">
+            <span className="theme-text-muted text-xs">
               {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : ".xyz only"}
             </span>
           </div>
         </div>
 
         {errorMessage ? (
-          <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{errorMessage}</div>
+          <div className="theme-error-banner rounded-2xl px-4 py-3 text-sm">{errorMessage}</div>
         ) : null}
 
         <button
           type="submit"
           disabled={!selectedFile || isSubmitting}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="theme-button-primary inline-flex w-full items-center justify-center rounded-2xl px-5 py-4 text-sm font-semibold transition disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Creating demo job..." : "Preview generated candidates"}
         </button>
       </form>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+      <div className="theme-text-secondary mt-5 flex flex-wrap items-center gap-3 text-sm">
         <span>This is a prototype research preview.</span>
-        <a href="/demo/sample_input.xyz" className="inline-flex items-center gap-2 text-cyan-200 transition hover:text-cyan-100" download>
+        <a href="/demo/sample_input.xyz" className="theme-link-accent inline-flex items-center gap-2 transition" download>
           Download sample `.xyz`
         </a>
       </div>
