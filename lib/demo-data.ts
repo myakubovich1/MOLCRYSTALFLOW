@@ -1,13 +1,14 @@
 import templateJson from "@/data/demo-result.json";
 import type {
+  AtomCoordinate,
   CandidatePreview,
   JobResult,
   MoleculeEdge,
   MoleculeNode,
-  ParsedAtom,
+  NormalizedMolecularInput,
   ResultFile,
-  XyzParseResult,
 } from "@/lib/types";
+import { createNormalizedInputFromAtomCoordinates } from "@/lib/molecular-input";
 
 interface DemoTemplate {
   candidateBaseCount: number;
@@ -46,7 +47,7 @@ export const workflowSteps = [
 
 const demoTemplate = templateJson as DemoTemplate;
 
-const sampleAtoms: ParsedAtom[] = [
+const sampleAtoms: AtomCoordinate[] = [
   { symbol: "C", x: -1.42, y: 0.14, z: 0.01 },
   { symbol: "C", x: -0.68, y: 1.31, z: 0.09 },
   { symbol: "O", x: 0.71, y: 1.18, z: 0.14 },
@@ -78,7 +79,7 @@ function colorForElement(symbol: string) {
   }
 }
 
-function createEdges(atoms: ParsedAtom[]) {
+function createEdges(atoms: AtomCoordinate[]) {
   const maxAtoms = Math.min(atoms.length, 14);
   const degreeCounts = new Array(maxAtoms).fill(0);
   const distances: Array<{ source: number; target: number; distance: number }> = [];
@@ -129,7 +130,7 @@ function createEdges(atoms: ParsedAtom[]) {
   return edges;
 }
 
-function createMoleculePreview(atoms: ParsedAtom[]) {
+function createMoleculePreview(atoms: AtomCoordinate[]) {
   const sampledAtoms = atoms.slice(0, Math.min(atoms.length, 14));
   const xs = sampledAtoms.map((atom) => atom.x);
   const ys = sampledAtoms.map((atom) => atom.y);
@@ -183,21 +184,20 @@ function buildCandidates(formula: string) {
 
 export function createJobResult(input: {
   id: string;
-  originalFilename: string;
-  parsed: XyzParseResult;
+  input: NormalizedMolecularInput;
   receivedAt?: string;
 }): JobResult {
   const receivedAt = input.receivedAt ?? new Date().toISOString();
 
   return {
     id: input.id,
-    originalFilename: input.originalFilename,
-    formula: input.parsed.formula,
-    atomCount: input.parsed.atomCount,
-    candidateCount: candidateCountForAtomCount(input.parsed.atomCount),
+    originalFilename: input.input.source.sourceLabel,
+    formula: input.input.formula,
+    atomCount: input.input.atomCount,
+    candidateCount: candidateCountForAtomCount(input.input.atomCount),
     zValues: demoTemplate.zValues,
     resultFiles: demoTemplate.resultFiles,
-    previewCandidates: buildCandidates(input.parsed.formula),
+    previewCandidates: buildCandidates(input.input.formula),
     status: "completed",
     stage: "completed",
     note: demoTemplate.note,
@@ -205,7 +205,7 @@ export function createJobResult(input: {
     generationMode: demoTemplate.generationMode,
     completionState: demoTemplate.completionState,
     receivedAt,
-    moleculePreview: createMoleculePreview(input.parsed.atoms),
+    moleculePreview: createMoleculePreview(input.input.atoms),
   };
 }
 
@@ -216,14 +216,12 @@ export function getSeededDemoJob(id: string) {
 
   return createJobResult({
     id,
-    originalFilename: "sample_input.xyz",
-    parsed: {
-      atomCount: sampleAtoms.length,
-      formula: "C4H6NO",
-      atoms: sampleAtoms,
-      isValid: true,
+    input: createNormalizedInputFromAtomCoordinates(sampleAtoms, {
+      mode: "upload-file",
+      sourceLabel: "sample_input.xyz",
+      originalFilename: "sample_input.xyz",
       commentLine: "Seeded demo conformer",
-    },
+    }),
     receivedAt: new Date("2026-03-24T15:42:00.000Z").toISOString(),
   });
 }

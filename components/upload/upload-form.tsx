@@ -5,11 +5,10 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, LoaderCircle, UploadCloud } from "lucide-react";
 
+import { createMoleculeSubmissionPayload, createNormalizedInputFromFile, MAX_MOLECULAR_INPUT_BYTES } from "@/lib/molecular-input";
 import type { SubmissionResponse } from "@/lib/types";
 import { Panel } from "@/components/ui/panel";
 import { cn } from "@/lib/utils";
-
-const maxUploadSizeInMb = 5;
 
 function isXyzFile(file: File) {
   return file.name.toLowerCase().endsWith(".xyz");
@@ -34,8 +33,8 @@ export function UploadForm() {
       return;
     }
 
-    if (file.size > maxUploadSizeInMb * 1024 * 1024) {
-      setErrorMessage(`Keep the uploaded conformer under ${maxUploadSizeInMb} MB for demo mode.`);
+    if (file.size > MAX_MOLECULAR_INPUT_BYTES) {
+      setErrorMessage("Keep the uploaded conformer under 5 MB for demo mode.");
       setSelectedFile(null);
       return;
     }
@@ -55,12 +54,17 @@ export function UploadForm() {
     setErrorMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      // Current UI exercises the file-upload path, but paste-XYZ and manual-entry
+      // screens can reuse the same normalized payload contract when they are wired in.
+      const normalizedInput = await createNormalizedInputFromFile(selectedFile);
+      const submissionPayload = createMoleculeSubmissionPayload(normalizedInput);
 
       const response = await fetch("/api/mock-submit", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submissionPayload),
       });
 
       const payload = (await response.json()) as SubmissionResponse & { error?: string };

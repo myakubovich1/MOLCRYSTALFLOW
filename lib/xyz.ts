@@ -1,6 +1,6 @@
-import type { ParsedAtom, XyzParseResult } from "@/lib/types";
+import type { AtomCoordinate, ParsedAtom, XyzParseResult } from "@/lib/types";
 
-function normalizeSymbol(raw: string) {
+export function normalizeAtomSymbol(raw: string) {
   const letters = raw.replace(/[^a-z]/gi, "");
 
   if (!letters) {
@@ -10,7 +10,7 @@ function normalizeSymbol(raw: string) {
   return letters[0].toUpperCase() + letters.slice(1).toLowerCase();
 }
 
-function buildFormula(atoms: ParsedAtom[]) {
+export function buildFormula(atoms: ParsedAtom[]) {
   const counts = new Map<string, number>();
 
   atoms.forEach((atom) => {
@@ -33,7 +33,12 @@ function buildFormula(atoms: ParsedAtom[]) {
     .join("");
 }
 
-export function parseXyzFile(contents: string): XyzParseResult {
+export function atomCoordinatesToXyzText(atoms: AtomCoordinate[], commentLine = "MolCrystalFlow normalized input") {
+  const lines = atoms.map((atom) => `${atom.symbol} ${atom.x.toFixed(6)} ${atom.y.toFixed(6)} ${atom.z.toFixed(6)}`);
+  return [String(atoms.length), commentLine, ...lines].join("\n");
+}
+
+export function parseXyzText(contents: string): XyzParseResult {
   const lines = contents
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -60,7 +65,7 @@ export function parseXyzFile(contents: string): XyzParseResult {
         return null;
       }
 
-      const symbol = normalizeSymbol(parts[0] ?? "");
+      const symbol = normalizeAtomSymbol(parts[0] ?? "");
       const x = Number(parts[1]);
       const y = Number(parts[2]);
       const z = Number(parts[3]);
@@ -85,3 +90,5 @@ export function parseXyzFile(contents: string): XyzParseResult {
     commentLine,
   };
 }
+
+export const parseXyzFile = parseXyzText;

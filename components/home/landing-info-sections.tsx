@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { ChevronDown, Cpu, FlaskConical, HardDrive, Workflow } from "lucide-react";
@@ -23,6 +23,67 @@ interface ExpandableInfoSectionProps {
   children: ReactNode;
 }
 
+interface ExpandableContentProps {
+  id: string;
+  isOpen: boolean;
+  children: ReactNode;
+}
+
+function ExpandableContent({ id, isOpen, children }: ExpandableContentProps) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    const node = contentRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const updateHeight = () => {
+      setContentHeight(node.scrollHeight);
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [children]);
+
+  return (
+    <div
+      id={id}
+      aria-hidden={!isOpen}
+      className={cn(
+        "overflow-hidden transition-[height] duration-[560ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[height]",
+        !isOpen && "pointer-events-none",
+      )}
+      style={{ height: isOpen ? `${contentHeight}px` : "0px" }}
+    >
+      <div
+        ref={contentRef}
+        className={cn(
+          "border-t border-white/8 px-5 pb-5 pt-5 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] sm:px-6 sm:pb-6",
+          isOpen ? "translate-y-0 opacity-100 delay-75" : "-translate-y-1.5 opacity-0",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function ExpandableInfoSection({
   id,
   title,
@@ -39,7 +100,7 @@ function ExpandableInfoSection({
   return (
     <Panel
       className={cn(
-        "overflow-hidden p-0 transition-colors duration-300",
+        "overflow-hidden p-0 transition-[border-color,background-color,box-shadow] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
         isOpen && "border-cyan-300/18 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(255,255,255,0.02)),rgba(8,15,24,0.9)]",
       )}
     >
@@ -53,7 +114,7 @@ function ExpandableInfoSection({
         <div className="flex items-start gap-4">
           <span
             className={cn(
-              "mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-slate-100 transition-colors duration-300",
+              "mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-slate-100 transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
               isOpen ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.03]",
             )}
           >
@@ -76,30 +137,25 @@ function ExpandableInfoSection({
 
               <span
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-slate-300 transition duration-300",
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-slate-300 transition-[border-color,background-color,color,transform] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
                   isOpen && "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
                 )}
               >
-                <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", isOpen && "rotate-180")} />
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    isOpen && "rotate-180",
+                  )}
+                />
               </span>
             </div>
           </div>
         </div>
       </button>
 
-      <div
-        id={contentId}
-        className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-500 ease-out",
-          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-white/8 px-5 pb-5 pt-5 sm:px-6 sm:pb-6">
-            {children}
-          </div>
-        </div>
-      </div>
+      <ExpandableContent id={contentId} isOpen={isOpen}>
+        {children}
+      </ExpandableContent>
     </Panel>
   );
 }

@@ -1,4 +1,7 @@
 export type JobStatus = "queued" | "processing" | "completed";
+export type InputMode = "upload-file" | "paste-xyz" | "manual-atoms";
+export type ExecutionTarget = "mock-demo" | "lab-desktop" | "hpc-cluster";
+export type BackendMode = "mock" | "live";
 
 export type WorkflowStage =
   | "file-received"
@@ -7,11 +10,21 @@ export type WorkflowStage =
   | "output-preparation"
   | "completed";
 
-export interface ParsedAtom {
+export interface AtomCoordinate {
   symbol: string;
   x: number;
   y: number;
   z: number;
+}
+
+export type ParsedAtom = AtomCoordinate;
+
+export interface ManualAtomRow {
+  id?: string;
+  symbol: string;
+  x: string | number;
+  y: string | number;
+  z: string | number;
 }
 
 export interface XyzParseResult {
@@ -20,6 +33,35 @@ export interface XyzParseResult {
   atoms: ParsedAtom[];
   isValid: boolean;
   commentLine?: string;
+}
+
+export interface NormalizedInputSource {
+  mode: InputMode;
+  sourceLabel: string;
+  originalFilename?: string;
+  commentLine?: string;
+  fileSizeBytes?: number;
+}
+
+export interface NormalizedMolecularInput {
+  source: NormalizedInputSource;
+  atoms: AtomCoordinate[];
+  atomCount: number;
+  formula: string;
+  xyzText: string;
+}
+
+export interface MoleculeSubmissionPayload {
+  schemaVersion: 1;
+  input: NormalizedMolecularInput;
+  execution: {
+    target: ExecutionTarget;
+    backendMode: BackendMode;
+  };
+  client: {
+    app: "molcrystalflow-demo";
+    submittedAt: string;
+  };
 }
 
 export interface MoleculeNode {

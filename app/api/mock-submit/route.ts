@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { createJobResult, getSeededDemoJob } from "@/lib/demo-data";
+import { getSeededDemoJob } from "@/lib/demo-data";
+import { parseMoleculeSubmissionPayload } from "@/lib/molecular-input";
 import { jobCookieOptions, JOB_COOKIE_NAME, mergeStoredJobs, parseJobsCookie, serializeJobsCookie } from "@/lib/mock-session";
 import type { SubmissionResponse } from "@/lib/types";
-import { parseXyzFile } from "@/lib/xyz";
+import { submitMoleculeSubmission } from "@/lib/submission";
 
 export const runtime = "nodejs";
 
@@ -20,41 +21,27 @@ function getCookieValue(request: Request, name: string) {
 }
 
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
+  let rawBody: unknown;
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ success: false, error: "Upload exactly one `.xyz` file." }, { status: 400 });
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: "Submit a JSON molecular payload." }, { status: 400 });
   }
 
-  if (!file.name.toLowerCase().endsWith(".xyz")) {
-    return NextResponse.json({ success: false, error: "The demo currently accepts only `.xyz` molecular conformer input." }, { status: 400 });
-  }
+  const parsedPayload = parseMoleculeSubmissionPayload(rawBody);
 
-  if (file.size === 0 || file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ success: false, error: "Keep the uploaded `.xyz` file between 1 byte and 5 MB." }, { status: 400 });
-  }
-
-  const contents = await file.text();
-  const parsed = parseXyzFile(contents);
-
-  if (!parsed.isValid || parsed.atomCount === 0) {
+  if (!parsedPayload.success) {
     return NextResponse.json(
       {
         success: false,
-        error: "The uploaded file could not be parsed as a valid `.xyz` molecular conformer.",
+        error: parsedPayload.error,
       },
       { status: 400 },
     );
   }
 
-  // Future real backend integration point:
-  // replace mock job creation with upload + remote submission to a lab machine or HPC entrypoint.
-  const job = createJobResult({
-    id: `mcf_${crypto.randomUUID().slice(0, 8)}`,
-    originalFilename: file.name,
-    parsed,
-  });
+  const job = await submitMoleculeSubmission(parsedPayload.payload);
 
   const existingJobs = parseJobsCookie(getCookieValue(request, JOB_COOKIE_NAME));
   const serializedJobs = serializeJobsCookie(mergeStoredJobs(existingJobs, job));
