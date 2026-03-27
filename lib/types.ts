@@ -93,6 +93,16 @@ export interface ResultFile {
   kind: "bundle" | "candidate-set";
 }
 
+export interface LatticeParameters {
+  a: number;
+  b: number;
+  c: number;
+  alpha: number;
+  beta: number;
+  gamma: number;
+  volume: number;
+}
+
 export interface CandidatePreview {
   id: string;
   title: string;
@@ -100,6 +110,7 @@ export interface CandidatePreview {
   mode: string;
   summary: string;
   lattice: string;
+  latticeParameters: LatticeParameters;
   confidenceLabel: string;
   artifactHref: string;
   accent: "cyan" | "violet" | "emerald" | "amber";

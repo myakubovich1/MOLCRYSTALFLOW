@@ -20,12 +20,10 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
     <Panel className="p-6 sm:p-7">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Molecule preview</p>
-          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Conformer geometry signal</h2>
+          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Viewer block</p>
+          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Structure preview surface</h2>
         </div>
-        <span className="theme-chip rounded-full px-3 py-1 text-xs">
-          Coordinate-derived mock visualization
-        </span>
+        <span className="theme-chip rounded-full px-3 py-1 text-xs">Viewer-ready mock surface</span>
       </div>
 
       <div
@@ -89,12 +87,9 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
           ))}
         </svg>
         <div className="relative z-10 mt-4 flex flex-wrap items-center gap-3">
-          <span className="theme-chip-accent rounded-full px-3 py-1 text-xs">
-            Projected from uploaded coordinates
-          </span>
-          <span className="theme-chip rounded-full px-3 py-1 text-xs">
-            Visual metaphor for demo review, not a final scientific renderer
-          </span>
+          <span className="theme-chip-accent rounded-full px-3 py-1 text-xs">Projected from uploaded coordinates</span>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">Can later host an interactive 3D structure viewer</span>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">Visual metaphor for demo review, not a final scientific renderer</span>
         </div>
       </div>
     </Panel>

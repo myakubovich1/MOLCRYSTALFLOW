@@ -19,7 +19,7 @@ export default function NotFound() {
               href="/"
               className="theme-button-outline inline-flex items-center rounded-full px-5 py-3 text-sm font-medium"
             >
-              Return home
+              Return to Generate
             </Link>
             <Link
               href="/results/demo-sample"

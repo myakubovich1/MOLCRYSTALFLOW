@@ -30,6 +30,15 @@
       "mode": "Packing proposal A",
       "summary": "Compact layered packing seeded from the uploaded conformer geometry.",
       "lattice": "a 9.42 Å • b 11.08 Å • c 13.44 Å • β 101.6°",
+      "latticeParameters": {
+        "a": 9.42,
+        "b": 11.08,
+        "c": 13.44,
+        "alpha": 90,
+        "beta": 101.6,
+        "gamma": 90,
+        "volume": 1377.2
+      },
       "confidenceLabel": "Demo candidate set",
       "artifactHref": "/demo/pred_combined.xyz",
       "accent": "cyan"
@@ -41,6 +50,15 @@
       "mode": "Packing proposal B",
       "summary": "Slightly expanded motif with alternate stacking and comparable packing density.",
       "lattice": "a 10.14 Å • b 10.88 Å • c 14.02 Å • β 98.4°",
+      "latticeParameters": {
+        "a": 10.14,
+        "b": 10.88,
+        "c": 14.02,
+        "alpha": 90,
+        "beta": 98.4,
+        "gamma": 90,
+        "volume": 1528.9
+      },
       "confidenceLabel": "Demo candidate set",
       "artifactHref": "/demo/crystals_z2.xyz",
       "accent": "violet"
