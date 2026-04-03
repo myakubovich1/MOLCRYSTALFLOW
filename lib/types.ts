@@ -1,5 +1,6 @@
-export type JobStatus = "queued" | "processing" | "completed";
+export type JobStatus = "queued" | "running" | "completed" | "failed";
 export type InputMode = "upload-file" | "paste-xyz" | "manual-atoms";
+export type SubmitInputMode = "upload" | "paste";
 export type ExecutionTarget = "mock-demo" | "lab-desktop" | "hpc-cluster";
 export type BackendMode = "mock" | "live";
 
@@ -132,11 +133,18 @@ export interface JobResult {
   generationMode: string;
   completionState: string;
   receivedAt: string;
-  moleculePreview: MoleculePreviewGraph;
+  moleculePreview: MoleculePreviewGraph | null;
+  logTail?: string[];
 }
 
-export interface SubmissionResponse {
-  success: boolean;
-  job: JobResult;
-  nextUrl: string;
+export interface SubmitPayload {
+  xyzText: string;
+  originalFilename?: string;
+  inputMode: SubmitInputMode;
+}
+
+export interface SubmitJobResponse {
+  jobId: string;
+  status?: JobStatus;
+  error?: string;
 }

@@ -2,10 +2,39 @@ import { Panel } from "@/components/ui/panel";
 import type { MoleculePreviewGraph } from "@/lib/types";
 
 interface MoleculePreviewProps {
-  graph: MoleculePreviewGraph;
+  graph?: MoleculePreviewGraph | null;
 }
 
 export function MoleculePreview({ graph }: MoleculePreviewProps) {
+  if (!graph || graph.nodes.length === 0) {
+    return (
+      <Panel className="p-6 sm:p-7">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Viewer block</p>
+            <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Structure preview surface</h2>
+          </div>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">Viewer integration pending</span>
+        </div>
+
+        <div
+          className="relative overflow-hidden rounded-[28px] border border-dashed border-[color:var(--surface-border-strong)] p-6"
+          style={{ background: "var(--molecule-surface)" }}
+        >
+          <div className="theme-subpanel-soft flex min-h-[24rem] items-center justify-center rounded-[24px] p-6 text-center">
+            <div className="max-w-md">
+              <p className="theme-text-primary text-lg font-medium">Interactive structure viewing is reserved for a later frontend upgrade.</p>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
+                The connected desktop backend is already returning artifact files. This viewer surface can later be upgraded to load those structures
+                directly in-browser without changing the rest of the results workflow.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Panel>
+    );
+  }
+
   const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
 
   const sortedEdges = [...graph.edges].sort((left, right) => {

@@ -13,6 +13,9 @@ interface ResultsDashboardProps {
 }
 
 export function ResultsDashboard({ job }: ResultsDashboardProps) {
+  const hasPreviewCandidates = job.previewCandidates.length > 0;
+  const hasLogTail = (job.logTail?.length ?? 0) > 0;
+
   return (
     <div className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -24,8 +27,8 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
                 Generated crystal structure candidates ready for review
               </h1>
               <p className="theme-text-secondary mt-5 max-w-2xl text-sm leading-7 sm:text-base">
-                MolCrystalFlow Demo accepted the submitted conformer, staged the generator workflow, and returned a mock result package shaped like a
-                future desktop-backed execution response.
+                MolCrystalFlow Demo accepted the submitted conformer, staged the generator workflow, and returned a desktop-backed result package
+                through the website bridge.
               </p>
             </div>
             <div className="theme-subpanel-soft rounded-[24px] px-5 py-4 text-sm">
@@ -38,7 +41,11 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Job id</p>
+              <p className="theme-text-primary mt-2 break-all text-sm font-medium leading-6">{job.id}</p>
+            </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input file</p>
               <p className="theme-text-primary mt-2 text-lg font-medium">{job.originalFilename}</p>
@@ -55,6 +62,14 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Candidates</p>
               <p className="theme-text-primary mt-2 text-lg font-medium">{job.candidateCount}</p>
             </div>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Status</p>
+              <p className="theme-text-primary mt-2 text-lg font-medium">{job.status}</p>
+            </div>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Z values</p>
+              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{formatZValues(job.zValues)}</p>
+            </div>
           </div>
         </Panel>
 
@@ -65,24 +80,20 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
             </span>
             <div>
               <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Generation summary</p>
-              <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Mock result package</h2>
+              <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Desktop result package</h2>
               <p className="theme-text-secondary mt-3 text-sm leading-7">{job.description}</p>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Generation mode</p>
-              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.generationMode}</p>
-            </div>
-            <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Z values</p>
-              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{formatZValues(job.zValues)}</p>
-            </div>
-            <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input descriptor</p>
-              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">3D molecular conformer received</p>
-            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="theme-subpanel rounded-[22px] p-4">
+                <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Generation mode</p>
+                <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.generationMode}</p>
+              </div>
+              <div className="theme-subpanel rounded-[22px] p-4">
+                <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input descriptor</p>
+                <p className="theme-text-primary mt-2 text-sm font-medium leading-6">3D molecular conformer received</p>
+              </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completion state</p>
               <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.completionState}</p>
@@ -105,11 +116,21 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
                 <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Crystal structure previews</h2>
               </div>
             </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {job.previewCandidates.map((candidate) => (
-                <CandidateCard key={candidate.id} candidate={candidate} formula={job.formula} atomCount={job.atomCount} />
-              ))}
-            </div>
+            {hasPreviewCandidates ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {job.previewCandidates.map((candidate) => (
+                  <CandidateCard key={candidate.id} candidate={candidate} formula={job.formula} atomCount={job.atomCount} />
+                ))}
+              </div>
+            ) : (
+              <div className="theme-subpanel-soft rounded-[26px] px-5 py-5">
+                <p className="theme-text-primary text-sm font-medium">Artifact-level results are available, but per-candidate preview cards are not being returned yet.</p>
+                <p className="theme-text-secondary mt-3 text-sm leading-7">
+                  The current desktop backend bridge exposes summary metrics, generated XYZ files, and recent logs. This gallery can expand once the
+                  backend returns richer per-candidate metadata.
+                </p>
+              </div>
+            )}
           </Panel>
         </div>
 
@@ -134,6 +155,21 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
           <Panel className="theme-warning-panel p-6">
             <p className="text-xs font-medium uppercase tracking-[0.24em]">Scientific disclaimer</p>
             <p className="mt-4 text-sm leading-7">{job.note}</p>
+          </Panel>
+
+          <Panel className="p-6">
+            <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Log tail</p>
+            {hasLogTail ? (
+              <div className="theme-subpanel-soft mt-4 rounded-[24px] p-4">
+                <pre className="theme-text-secondary overflow-x-auto whitespace-pre-wrap break-words font-[family:var(--font-mono)] text-xs leading-6">
+                  {job.logTail?.join("\n")}
+                </pre>
+              </div>
+            ) : (
+              <p className="theme-text-secondary mt-4 text-sm leading-7">
+                Recent desktop-backend log lines are not available for this result yet.
+              </p>
+            )}
           </Panel>
 
           <Panel className="p-6">

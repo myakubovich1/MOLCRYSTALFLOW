@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
+import { LiveResultsClient } from "@/components/results/live-results-client";
 import { ResultsDashboard } from "@/components/results/results-dashboard";
 import { AppFrame } from "@/components/ui/app-frame";
 import { getSeededDemoJob } from "@/lib/demo-data";
-import { getStoredJob } from "@/lib/mock-session";
 
 interface ResultsPageProps {
   params: Promise<{
@@ -14,24 +13,20 @@ interface ResultsPageProps {
 
 export async function generateMetadata({ params }: ResultsPageProps): Promise<Metadata> {
   const { id } = await params;
-  const job = (await getStoredJob(id)) ?? getSeededDemoJob(id);
+  const job = getSeededDemoJob(id);
 
   return {
-    title: job ? `${job.formula} result preview` : "Result preview",
+    title: job ? `${job.formula} result preview` : `Result ${id}`,
   };
 }
 
 export default async function ResultsPage({ params }: ResultsPageProps) {
   const { id } = await params;
-  const job = (await getStoredJob(id)) ?? getSeededDemoJob(id);
-
-  if (!job) {
-    notFound();
-  }
+  const job = getSeededDemoJob(id);
 
   return (
     <AppFrame>
-      <ResultsDashboard job={job} />
+      {job ? <ResultsDashboard job={job} /> : <LiveResultsClient jobId={id} />}
     </AppFrame>
   );
 }

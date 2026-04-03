@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import Link from "next/link";
-import { ArrowUpRight, Orbit } from "lucide-react";
+import { Orbit } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -36,17 +36,10 @@ export function AppFrame({ children }: AppFrameProps) {
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end xl:gap-4">
             <TopNav />
             <div className="flex flex-wrap items-center gap-3">
-              <StatusPill>Demo mode</StatusPill>
+              <StatusPill>Research Preview</StatusPill>
               <div className="hidden xl:block">
                 <ThemeToggle />
               </div>
-              <Link
-                href="/results/demo-sample"
-                className="theme-button-outline inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition"
-              >
-                Open sample
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
             </div>
           </div>
         </div>
