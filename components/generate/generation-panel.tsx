@@ -1,48 +1,45 @@
 "use client";
 
-import { startTransition, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { FileUp, LoaderCircle, ScanText, UploadCloud } from "lucide-react";
 
+import { BackendHealthIndicator } from "@/components/generate/backend-health-indicator";
 import { Panel } from "@/components/ui/panel";
 import { parseSubmitResponse } from "@/lib/desktop-backend";
-import { cn } from "@/lib/utils";
 import {
   createNormalizedInputFromFile,
   createNormalizedInputFromPastedXyz,
   MAX_MOLECULAR_INPUT_BYTES,
 } from "@/lib/molecular-input";
 import type { InputMode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type GenerateInputMode = Extract<InputMode, "upload-file" | "paste-xyz">;
 
 const inputModes: Array<{
   value: GenerateInputMode;
   label: string;
-  description: string;
-  icon: typeof UploadCloud;
 }> = [
   {
     value: "upload-file",
     label: "Upload `.xyz`",
-    description: "Provide one molecular conformer file from disk.",
-    icon: UploadCloud,
   },
   {
     value: "paste-xyz",
     label: "Paste XYZ",
-    description: "Paste raw XYZ coordinates directly into the generator.",
-    icon: ScanText,
   },
-] as const;
+];
+
+interface GenerationPanelProps {
+  onJobCreated: (jobId: string) => void;
+}
 
 function isXyzFile(file: File) {
   return file.name.toLowerCase().endsWith(".xyz");
 }
 
-export function GenerateWorkbench() {
-  const router = useRouter();
+export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputMode, setInputMode] = useState<GenerateInputMode>("upload-file");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -112,63 +109,60 @@ export function GenerateWorkbench() {
       }
 
       const submitResponse = parseSubmitResponse(payload);
-
-      startTransition(() => {
-        router.push(`/results/${submitResponse.jobId}`);
-      });
+      onJobCreated(submitResponse.jobId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to create generation job.";
-      setErrorMessage(message);
+      setErrorMessage(error instanceof Error ? error.message : "Unable to create generation job.");
+    } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
     <Panel className="relative overflow-hidden p-6 sm:p-7">
-      <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Generator</p>
-          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Submit one XYZ conformer</h2>
-          <p className="theme-text-secondary mt-3 max-w-2xl text-sm leading-7">
-            Upload a file or paste XYZ text. The frontend validates the input, normalizes it to `xyzText`, and sends it to the desktop backend
-            through the server-side bridge.
-          </p>
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="theme-chip-accent rounded-full px-3 py-1 text-xs">Generate</span>
+        <BackendHealthIndicator />
+        <span className="theme-chip rounded-full px-3 py-1 text-xs">XYZ input only</span>
+      </div>
+
+      <div className="mt-5">
+        <h1 className="theme-text-primary text-3xl font-semibold tracking-tight">Generate crystal structure candidates</h1>
+        <p className="theme-text-secondary mt-4 text-sm leading-7">
+          Submit one molecular conformer in XYZ format. The website forwards normalized coordinates to the dedicated desktop backend, then streams
+          status and result files back into this workspace.
+        </p>
+      </div>
+
+      <div className="theme-subpanel-soft mt-6 rounded-[24px] p-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
+          {inputModes.map((mode) => {
+            const isActive = inputMode === mode.value;
+
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                onClick={() => {
+                  setInputMode(mode.value);
+                  setErrorMessage(null);
+                }}
+                className={cn(
+                  "rounded-[18px] px-4 py-3 text-sm font-medium transition",
+                  isActive
+                    ? "bg-[color:var(--panel-fill)] theme-text-primary shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+                    : "theme-text-secondary hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--text-primary)]",
+                )}
+              >
+                {mode.label}
+              </button>
+            );
+          })}
         </div>
-        <span className="theme-chip rounded-full px-3 py-1 text-xs">XYZ only</span>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2">
-        {inputModes.map((mode) => {
-          const Icon = mode.icon;
-          const isActive = inputMode === mode.value;
-
-          return (
-            <button
-              key={mode.value}
-              type="button"
-              onClick={() => {
-                setInputMode(mode.value);
-                setErrorMessage(null);
-              }}
-              className={cn(
-                "rounded-[22px] border px-4 py-4 text-left transition",
-                isActive
-                  ? "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] shadow-[0_0_40px_var(--accent-shadow)]"
-                  : "border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] hover:border-[color:var(--surface-border-strong)] hover:bg-[color:var(--surface-muted)]",
-              )}
-            >
-              <span className={cn("mb-4 flex h-10 w-10 items-center justify-center rounded-2xl", isActive ? "theme-icon-shell-accent" : "theme-icon-shell")}>
-                <Icon className="h-4 w-4" />
-              </span>
-              <p className="theme-text-primary text-sm font-medium">{mode.label}</p>
-              <p className="theme-text-secondary mt-2 text-sm leading-6">{mode.description}</p>
-            </button>
-          );
-        })}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         {inputMode === "upload-file" ? (
           <div className="space-y-4">
             <button
@@ -185,22 +179,22 @@ export function GenerateWorkbench() {
                 validateAndSetFile(event.dataTransfer.files?.[0] ?? null);
               }}
               className={cn(
-                "group flex w-full flex-col items-center justify-center rounded-[26px] border border-dashed px-5 py-11 text-center transition",
+                "group flex w-full flex-col items-center justify-center rounded-[26px] border border-dashed px-5 py-10 text-center transition",
                 isDragging
                   ? "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)]"
                   : "border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] hover:border-[color:var(--surface-border-strong)] hover:bg-[color:var(--surface-muted)]",
               )}
             >
-              <span className="theme-icon-shell-accent mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
-                {isSubmitting ? <LoaderCircle className="h-7 w-7 animate-spin" /> : <UploadCloud className="h-7 w-7" />}
+              <span className="theme-icon-shell-accent mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
+                {isSubmitting ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <UploadCloud className="h-6 w-6" />}
               </span>
-              <span className="theme-text-primary text-lg font-medium">Drop a `.xyz` conformer here</span>
+              <span className="theme-text-primary text-base font-medium">Drop one `.xyz` conformer here</span>
               <span className="theme-text-secondary mt-2 max-w-sm text-sm leading-6">
-                Upload exactly one geometry file. The backend uses this single conformer as the generation input.
+                Upload exactly one geometry file. This single conformer becomes the backend generation input.
               </span>
               <span className="theme-chip mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs">
                 <FileUp className="h-3.5 w-3.5" />
-                Click to browse
+                Browse files
               </span>
             </button>
 
@@ -213,18 +207,16 @@ export function GenerateWorkbench() {
             />
 
             <div className="theme-subpanel rounded-[22px] px-4 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="theme-text-primary text-sm font-medium">Selected file</p>
-                  <p className="theme-text-secondary mt-1 text-sm">{selectedFile ? selectedFile.name : "No `.xyz` file selected yet"}</p>
-                </div>
-                <span className="theme-text-muted text-xs">{selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : ".xyz only"}</span>
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Selected file</p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="theme-text-primary text-sm font-medium">{selectedFile ? selectedFile.name : "No `.xyz` file selected yet"}</p>
+                <span className="theme-text-secondary text-xs">{selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : ".xyz only"}</span>
               </div>
             </div>
           </div>
         ) : (
           <label className="block">
-            <span className="theme-text-primary mb-3 block text-sm font-medium">Paste XYZ coordinates</span>
+            <span className="theme-text-muted mb-3 block text-xs font-medium uppercase tracking-[0.2em]">XYZ coordinates</span>
             <textarea
               value={pastedXyz}
               onChange={(event) => setPastedXyz(event.target.value)}
@@ -235,7 +227,7 @@ O 1.214000 0.000000 0.000000
 H -0.550000 0.940000 0.000000
 H -0.550000 -0.940000 0.000000
 H 1.760000 0.000000 0.890000`}
-              className="theme-input min-h-[18rem] w-full rounded-[26px] px-4 py-4 font-[family:var(--font-mono)] text-sm leading-7"
+              className="theme-input min-h-[20rem] w-full rounded-[26px] px-4 py-4 font-[family:var(--font-mono)] text-sm leading-7"
               spellCheck={false}
             />
           </label>
@@ -252,11 +244,18 @@ H 1.760000 0.000000 0.890000`}
         </button>
       </form>
 
-      <div className="theme-text-secondary mt-5 flex flex-wrap items-center gap-3 text-sm">
-        <span>Supported today: upload `.xyz` or paste XYZ text.</span>
-        <a href="/demo/sample_input.xyz" className="theme-link-accent inline-flex items-center gap-2 transition" download>
-          Download sample `.xyz`
-        </a>
+      <div className="theme-subpanel-soft mt-6 rounded-[24px] p-4">
+        <p className="theme-text-primary text-sm font-medium">Scope and limits</p>
+        <p className="theme-text-secondary mt-2 text-sm leading-7">
+          Outputs are candidate molecular crystal structures generated with fixed backend defaults. Throughput depends on desktop compute
+          availability, and returned artifacts are research-oriented candidates rather than final validated crystal rankings.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+          <a href="/demo/sample_input.xyz" className="theme-link-accent inline-flex items-center gap-2 transition" download>
+            Download sample `.xyz`
+          </a>
+          <span className="theme-text-secondary">Upload or paste exactly one conformer per run.</span>
+        </div>
       </div>
     </Panel>
   );

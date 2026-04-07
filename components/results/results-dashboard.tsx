@@ -18,21 +18,18 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Panel className="overflow-hidden p-6 sm:p-8">
+      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <MoleculePreview graph={job.moleculePreview} />
+
+        <Panel className="overflow-hidden p-6 sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <StatusPill>Research preview</StatusPill>
-              <h1 className="theme-text-primary mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
-                Generated crystal structure candidates ready for review
-              </h1>
-              <p className="theme-text-secondary mt-5 max-w-2xl text-sm leading-7 sm:text-base">
-                MolCrystalFlow Demo accepted the submitted conformer, staged the generator workflow, and returned a desktop-backed result package
-                through the website bridge.
-              </p>
+              <StatusPill>Completed</StatusPill>
+              <h3 className="theme-text-primary mt-5 text-2xl font-semibold">Desktop result package ready</h3>
+              <p className="theme-text-secondary mt-4 text-sm leading-7">{job.description}</p>
             </div>
             <div className="theme-subpanel-soft rounded-[24px] px-5 py-4 text-sm">
-              <div className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completed</div>
+              <div className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completion state</div>
               <div className="theme-text-primary mt-3 flex items-center gap-2 font-medium">
                 <CheckCircle2 className="theme-state-success-text h-4 w-4" />
                 {job.completionState}
@@ -41,98 +38,86 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Job id</p>
-              <p className="theme-text-primary mt-2 break-all text-sm font-medium leading-6">{job.id}</p>
+              <p className="theme-text-primary mt-3 break-all text-sm font-medium leading-6">{job.id}</p>
             </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input file</p>
-              <p className="theme-text-primary mt-2 text-lg font-medium">{job.originalFilename}</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.originalFilename}</p>
             </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Formula</p>
-              <p className="theme-text-primary mt-2 text-lg font-medium">{job.formula}</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.formula}</p>
             </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Atom count</p>
-              <p className="theme-text-primary mt-2 text-lg font-medium">{job.atomCount}</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.atomCount}</p>
             </div>
             <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Candidates</p>
-              <p className="theme-text-primary mt-2 text-lg font-medium">{job.candidateCount}</p>
-            </div>
-            <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Status</p>
-              <p className="theme-text-primary mt-2 text-lg font-medium">{job.status}</p>
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Candidate count</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.candidateCount}</p>
             </div>
             <div className="theme-subpanel rounded-[22px] p-4">
               <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Z values</p>
-              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{formatZValues(job.zValues)}</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{formatZValues(job.zValues)}</p>
             </div>
-          </div>
-        </Panel>
-
-        <Panel className="p-6 sm:p-7">
-          <div className="flex items-start gap-4">
-            <span className="theme-icon-shell-accent flex h-12 w-12 items-center justify-center rounded-2xl">
-              <DatabaseZap className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Generation summary</p>
-              <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Desktop result package</h2>
-              <p className="theme-text-secondary mt-3 text-sm leading-7">{job.description}</p>
-            </div>
-          </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="theme-subpanel rounded-[22px] p-4">
-                <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Generation mode</p>
-                <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.generationMode}</p>
-              </div>
-              <div className="theme-subpanel rounded-[22px] p-4">
-                <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input descriptor</p>
-                <p className="theme-text-primary mt-2 text-sm font-medium leading-6">3D molecular conformer received</p>
-              </div>
             <div className="theme-subpanel rounded-[22px] p-4">
-              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Completion state</p>
-              <p className="theme-text-primary mt-2 text-sm font-medium leading-6">{job.completionState}</p>
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Status</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.status}</p>
+            </div>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Generation mode</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">{job.generationMode}</p>
+            </div>
+            <div className="theme-subpanel rounded-[22px] p-4">
+              <p className="theme-text-muted text-xs uppercase tracking-[0.2em]">Input descriptor</p>
+              <p className="theme-text-primary mt-3 text-sm font-medium leading-6">3D molecular conformer received</p>
+            </div>
+          </div>
+
+          <div className="theme-subpanel-soft mt-5 rounded-[24px] p-4">
+            <div className="flex items-start gap-4">
+              <span className="theme-icon-shell-accent flex h-11 w-11 items-center justify-center rounded-2xl">
+                <DatabaseZap className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="theme-text-primary text-sm font-medium">Research-use output</p>
+                <p className="theme-text-secondary mt-2 text-sm leading-7">{job.note}</p>
+              </div>
             </div>
           </div>
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-6">
-          <MoleculePreview graph={job.moleculePreview} />
-
-          <Panel className="p-6 sm:p-7">
-            <div className="mb-5 flex items-start gap-4">
-              <span className="theme-icon-shell flex h-12 w-12 items-center justify-center rounded-2xl">
-                <Sparkles className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Candidate preview</p>
-                <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Crystal structure previews</h2>
-              </div>
+      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <Panel className="p-6 sm:p-7">
+          <div className="mb-5 flex items-start gap-4">
+            <span className="theme-icon-shell flex h-12 w-12 items-center justify-center rounded-2xl">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Candidate gallery</p>
+              <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Generated crystal candidates</h2>
             </div>
-            {hasPreviewCandidates ? (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {job.previewCandidates.map((candidate) => (
-                  <CandidateCard key={candidate.id} candidate={candidate} formula={job.formula} atomCount={job.atomCount} />
-                ))}
-              </div>
-            ) : (
-              <div className="theme-subpanel-soft rounded-[26px] px-5 py-5">
-                <p className="theme-text-primary text-sm font-medium">Artifact-level results are available, but per-candidate preview cards are not being returned yet.</p>
-                <p className="theme-text-secondary mt-3 text-sm leading-7">
-                  The current desktop backend bridge exposes summary metrics, generated XYZ files, and recent logs. This gallery can expand once the
-                  backend returns richer per-candidate metadata.
-                </p>
-              </div>
-            )}
-          </Panel>
-        </div>
+          </div>
+          {hasPreviewCandidates ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {job.previewCandidates.map((candidate) => (
+                <CandidateCard key={candidate.id} candidate={candidate} formula={job.formula} atomCount={job.atomCount} />
+              ))}
+            </div>
+          ) : (
+            <div className="theme-subpanel-soft rounded-[26px] px-5 py-5">
+              <p className="theme-text-primary text-sm font-medium">Artifact-level results are available, but per-candidate preview cards are not being returned yet.</p>
+              <p className="theme-text-secondary mt-3 text-sm leading-7">
+                The current backend bridge is returning summary metrics, generated XYZ files, and recent logs. This gallery can expand once the
+                desktop backend exposes richer per-candidate metadata.
+              </p>
+            </div>
+          )}
+        </Panel>
 
         <div className="space-y-6">
           <Panel className="p-6 sm:p-7">
@@ -152,11 +137,6 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
             </div>
           </Panel>
 
-          <Panel className="theme-warning-panel p-6">
-            <p className="text-xs font-medium uppercase tracking-[0.24em]">Scientific disclaimer</p>
-            <p className="mt-4 text-sm leading-7">{job.note}</p>
-          </Panel>
-
           <Panel className="p-6">
             <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Log tail</p>
             {hasLogTail ? (
@@ -170,14 +150,6 @@ export function ResultsDashboard({ job }: ResultsDashboardProps) {
                 Recent desktop-backend log lines are not available for this result yet.
               </p>
             )}
-          </Panel>
-
-          <Panel className="p-6">
-            <p className="theme-text-muted text-xs font-medium uppercase tracking-[0.24em]">Upgrade path</p>
-            <p className="theme-text-secondary mt-4 text-sm leading-7">
-              The current route and result schema are intentionally shaped so they can later be backed by real job submission, status polling, and
-              artifact retrieval from a dedicated lab machine, with cluster-style execution remaining an optional later extension.
-            </p>
           </Panel>
         </div>
       </section>

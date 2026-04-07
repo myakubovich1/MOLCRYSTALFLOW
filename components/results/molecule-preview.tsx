@@ -11,8 +11,8 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
       <Panel className="p-6 sm:p-7">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Viewer block</p>
-            <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Structure preview surface</h2>
+            <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Structure viewer</p>
+            <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Reserved viewer surface</h2>
           </div>
           <span className="theme-chip rounded-full px-3 py-1 text-xs">Viewer integration pending</span>
         </div>
@@ -23,10 +23,10 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
         >
           <div className="theme-subpanel-soft flex min-h-[24rem] items-center justify-center rounded-[24px] p-6 text-center">
             <div className="max-w-md">
-              <p className="theme-text-primary text-lg font-medium">Interactive structure viewing is reserved for a later frontend upgrade.</p>
+              <p className="theme-text-primary text-lg font-medium">Interactive structure inspection is reserved for a later frontend upgrade.</p>
               <p className="theme-text-secondary mt-3 text-sm leading-7">
-                The connected desktop backend is already returning artifact files. This viewer surface can later be upgraded to load those structures
-                directly in-browser without changing the rest of the results workflow.
+                The connected desktop backend is already returning XYZ artifact files. This viewer panel is where those structures can later be loaded
+                directly in-browser without changing the rest of the generation workflow.
               </p>
             </div>
           </div>
@@ -49,8 +49,8 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
     <Panel className="p-6 sm:p-7">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Viewer block</p>
-          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Structure preview surface</h2>
+          <p className="theme-text-accent text-xs font-medium uppercase tracking-[0.24em]">Structure viewer</p>
+          <h2 className="theme-text-primary mt-3 text-2xl font-semibold">Preview surface</h2>
         </div>
         <span className="theme-chip rounded-full px-3 py-1 text-xs">Viewer-ready mock surface</span>
       </div>
@@ -117,8 +117,8 @@ export function MoleculePreview({ graph }: MoleculePreviewProps) {
         </svg>
         <div className="relative z-10 mt-4 flex flex-wrap items-center gap-3">
           <span className="theme-chip-accent rounded-full px-3 py-1 text-xs">Projected from uploaded coordinates</span>
-          <span className="theme-chip rounded-full px-3 py-1 text-xs">Can later host an interactive 3D structure viewer</span>
-          <span className="theme-chip rounded-full px-3 py-1 text-xs">Visual metaphor for demo review, not a final scientific renderer</span>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">Can later host interactive 3D inspection</span>
+          <span className="theme-chip rounded-full px-3 py-1 text-xs">Visual placeholder, not a final scientific renderer</span>
         </div>
       </div>
     </Panel>
