@@ -19,10 +19,10 @@ const sfMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "MolCrystalFlow Demo",
-    template: "%s | MolCrystalFlow Demo",
+    default: "MolCrystalFlow",
+    template: "%s | MolCrystalFlow",
   },
-  description: "Mock-first molecular crystal generation workflow prototype for `.xyz` conformer upload and candidate preview.",
+  description: "Generate candidate crystal packings from a molecular conformer. Download results in XYZ format with interactive 3D previews.",
 };
 
 export default function RootLayout({

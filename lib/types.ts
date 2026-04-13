@@ -94,6 +94,14 @@ export interface ResultFile {
   kind: "bundle" | "candidate-set";
 }
 
+export interface ViewerSource {
+  artifactName: string;
+  label: string;
+  zValue: number;
+  rawText: string;
+  structures: string[];
+}
+
 export interface LatticeParameters {
   a: number;
   b: number;

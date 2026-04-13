@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
+    "3dmol": "^2.5.4",
     "lucide-react": "^0.511.0",
     "next": "^16.0.0",
     "react": "^19.0.0",

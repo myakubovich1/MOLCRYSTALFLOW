@@ -92,3 +92,43 @@ export function parseXyzText(contents: string): XyzParseResult {
 }
 
 export const parseXyzFile = parseXyzText;
+
+export function splitMultiXyzText(contents: string) {
+  const rawLines = contents.split(/\r?\n/);
+  const structures: string[] = [];
+  let index = 0;
+
+  while (index < rawLines.length) {
+    while (index < rawLines.length && rawLines[index]?.trim().length === 0) {
+      index += 1;
+    }
+
+    if (index >= rawLines.length) {
+      break;
+    }
+
+    const declaredCount = Number.parseInt(rawLines[index]?.trim() ?? "", 10);
+
+    if (!Number.isFinite(declaredCount) || declaredCount <= 0) {
+      break;
+    }
+
+    const commentLine = rawLines[index + 1] ?? "";
+    const atomLines = rawLines.slice(index + 2, index + 2 + declaredCount);
+
+    if (atomLines.length < declaredCount) {
+      break;
+    }
+
+    const block = [String(declaredCount), commentLine, ...atomLines].join("\n");
+    const parsed = parseXyzText(block);
+
+    if (parsed.isValid && parsed.atomCount > 0) {
+      structures.push(block);
+    }
+
+    index += declaredCount + 2;
+  }
+
+  return structures;
+}
