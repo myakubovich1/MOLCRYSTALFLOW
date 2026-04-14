@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Eye, Atom, LoaderCircle } from "lucide-react";
 
 import { StructureViewerModal } from "@/components/results/structure-viewer-modal";
+import { useTheme } from "@/components/theme/theme-provider";
 import { loadExampleStructures, getExampleMoleculeInfo } from "@/lib/example-structures";
 import type { ExampleStructure, LatticeParameters } from "@/lib/types";
 
@@ -130,7 +131,11 @@ function StructureCard({
   );
 }
 
-function useSnapshotRenderer(structures: ExampleStructure[]) {
+function getViewerBg(resolvedTheme: string) {
+  return resolvedTheme === "dark" ? "#07111b" : "#f7fbfd";
+}
+
+function useSnapshotRenderer(structures: ExampleStructure[], resolvedTheme: string) {
   const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
   const offscreenRef = useRef<HTMLDivElement | null>(null);
 
@@ -138,6 +143,7 @@ function useSnapshotRenderer(structures: ExampleStructure[]) {
     if (structures.length === 0) return;
 
     let cancelled = false;
+    const bg = getViewerBg(resolvedTheme);
     const container = document.createElement("div");
     container.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:300px;height:300px;";
     document.body.appendChild(container);
@@ -151,17 +157,14 @@ function useSnapshotRenderer(structures: ExampleStructure[]) {
 
       const viewer = $3Dmol.createViewer(container, {
         antialias: true,
-        backgroundColor: document.documentElement.dataset.theme === "dark" ? "#07111b" : "#f7fbfd",
+        backgroundColor: bg,
       });
 
       for (const structure of structures) {
         if (cancelled) break;
 
         viewer.clear();
-        viewer.setBackgroundColor(
-          document.documentElement.dataset.theme === "dark" ? "#07111b" : "#f7fbfd",
-          1,
-        );
+        viewer.setBackgroundColor(bg, 1);
         viewer.addModel(structure.xyzText, "xyz");
         viewer.setStyle({}, {
           stick: { radius: 0.15, colorscheme: "Jmol" },
@@ -192,7 +195,7 @@ function useSnapshotRenderer(structures: ExampleStructure[]) {
         document.body.removeChild(offscreenRef.current);
       }
     };
-  }, [structures]);
+  }, [structures, resolvedTheme]);
 
   return thumbnails;
 }
@@ -200,6 +203,7 @@ function useSnapshotRenderer(structures: ExampleStructure[]) {
 type ZFilter = "all" | 2 | 4;
 
 export function ExampleStructureGrid() {
+  const { resolvedTheme } = useTheme();
   const [structures, setStructures] = useState<ExampleStructure[]>([]);
   const [loading, setLoading] = useState(true);
   const [zFilter, setZFilter] = useState<ZFilter>("all");
@@ -212,7 +216,7 @@ export function ExampleStructureGrid() {
     });
   }, []);
 
-  const thumbnails = useSnapshotRenderer(structures);
+  const thumbnails = useSnapshotRenderer(structures, resolvedTheme);
 
   const filtered = zFilter === "all" ? structures : structures.filter((s) => s.zValue === zFilter);
 

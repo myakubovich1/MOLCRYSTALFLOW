@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, LoaderCircle, RotateCcw } from "lucide-react";
 
+import { useTheme } from "@/components/theme/theme-provider";
 import { Panel } from "@/components/ui/panel";
 import { buildViewerSourcesFromArtifacts } from "@/lib/structure-viewer";
 import type { ResultFile, ViewerSource } from "@/lib/types";
@@ -51,7 +52,7 @@ export function InteractiveStructureViewer({
   const [selectedCandidateIndex, setSelectedCandidateIndex] = useState(0);
   const [loadingArtifactName, setLoadingArtifactName] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
-  const [themeToken, setThemeToken] = useState(() => (typeof document === "undefined" ? "light" : document.documentElement.dataset.theme ?? "light"));
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const nextSelectedArtifact =
@@ -68,14 +69,6 @@ export function InteractiveStructureViewer({
     setSelectedCandidateIndex(0);
     setViewerError(null);
   }, [selectedArtifactName]);
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setThemeToken(document.documentElement.dataset.theme ?? "light");
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => observer.disconnect();
-  }, []);
 
   const selectedSource = selectedArtifactName ? sourcesByArtifact[selectedArtifactName] : undefined;
   const selectedStructure = selectedSource?.structures[selectedCandidateIndex] ?? null;
@@ -177,7 +170,7 @@ export function InteractiveStructureViewer({
 
     void renderStructure();
     return () => { isCancelled = true; };
-  }, [selectedStructure, themeToken]);
+  }, [selectedStructure, resolvedTheme]);
 
   useEffect(() => {
     const container = viewerContainerRef.current;

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, RotateCcw, X } from "lucide-react";
 
+import { useTheme } from "@/components/theme/theme-provider";
 import type { ExampleStructure } from "@/lib/types";
 
 type ThreeDMolViewer = {
@@ -42,6 +43,7 @@ function downloadXyz(structure: ExampleStructure) {
 }
 
 export function StructureViewerModal({ structure, structures, displayIndices, onClose, onNavigate }: StructureViewerModalProps) {
+  const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<ThreeDMolViewer | null>(null);
   const [ready, setReady] = useState(false);
@@ -62,6 +64,7 @@ export function StructureViewerModal({ structure, structures, displayIndices, on
     const container = containerRef.current;
     if (!container) return;
 
+    const bg = getViewerBg();
     let cancelled = false;
 
     async function render() {
@@ -73,13 +76,13 @@ export function StructureViewerModal({ structure, structures, displayIndices, on
       if (!viewerRef.current) {
         viewerRef.current = $3Dmol.createViewer(containerRef.current, {
           antialias: true,
-          backgroundColor: getViewerBg(),
+          backgroundColor: bg,
         });
       }
 
       const viewer = viewerRef.current;
       viewer.clear();
-      viewer.setBackgroundColor(getViewerBg(), 1);
+      viewer.setBackgroundColor(bg, 1);
       viewer.addModel(structure.xyzText, "xyz");
       viewer.setStyle({}, {
         stick: { radius: 0.15, colorscheme: "Jmol" },
@@ -93,7 +96,7 @@ export function StructureViewerModal({ structure, structures, displayIndices, on
 
     void render();
     return () => { cancelled = true; };
-  }, [structure.xyzText]);
+  }, [structure.xyzText, resolvedTheme]);
 
   useEffect(() => {
     const container = containerRef.current;
