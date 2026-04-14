@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, Copy } from "lucide-react";
+import { ArrowRight, Check, Copy, ExternalLink } from "lucide-react";
 
 const CITATION = `@article{molcrystalflow2024,
   title={MolCrystalFlow: Molecular Crystal Structure Generation via Flow Matching},
@@ -47,7 +47,7 @@ export function AboutPageSections() {
       <header>
         <h1 className="theme-text-primary text-3xl font-semibold tracking-tight">About MolCrystalFlow</h1>
         <p className="theme-text-secondary mt-4 text-sm leading-7">
-          MolCrystalFlow Demo is a web interface for molecular crystal candidate generation. Given a molecular
+          MolCrystalFlow is a web interface for molecular crystal candidate generation. Given a molecular
           conformer as input, the system generates candidate crystal packings using the MolCrystalFlow model,
           returning downloadable structure files and interactive 3D previews.
         </p>
@@ -151,8 +151,15 @@ export function AboutPageSections() {
 
       <Section title="Links">
         <div className="flex flex-wrap gap-3">
-          <span className="theme-chip rounded-lg px-3 py-2 text-sm">Paper (coming soon)</span>
-          <span className="theme-chip rounded-lg px-3 py-2 text-sm">GitHub (coming soon)</span>
+          <a
+            href="https://github.com/Liu-Group-UF/MolCrystalFlow"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="theme-button-outline inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            GitHub
+          </a>
         </div>
       </Section>
 

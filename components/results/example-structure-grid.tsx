@@ -59,10 +59,12 @@ function LatticeTable({ lp }: { lp: LatticeParameters }) {
 
 function StructureCard({
   structure,
+  displayIndex,
   thumbnailUrl,
   onView,
 }: {
   structure: ExampleStructure;
+  displayIndex: number;
   thumbnailUrl: string | null;
   onView: () => void;
 }) {
@@ -77,12 +79,12 @@ function StructureCard({
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
-              alt={`Z=${structure.zValue} #${structure.index + 1}`}
+              alt={`Z=${structure.zValue} #${displayIndex}`}
               className="h-full w-full object-contain transition group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <LoaderCircle className="theme-text-muted h-5 w-5 animate-spin" />
+              <div className="h-full w-full animate-pulse rounded bg-[color:var(--surface-soft)]" />
             </div>
           )}
         </div>
@@ -95,16 +97,15 @@ function StructureCard({
 
       <div className="p-3 space-y-2.5">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="theme-text-primary text-sm font-semibold">{structure.formula}</span>
           <span className="theme-chip rounded-full px-2 py-0.5 text-[10px] font-medium">
-            Z={structure.zValue} #{structure.index + 1}
+            Z={structure.zValue} #{displayIndex}
           </span>
+          <span className="theme-text-muted text-xs">{structure.atomCount} atoms</span>
         </div>
 
         <LatticeTable lp={structure.lattice} />
 
-        <div className="flex items-center justify-between text-xs">
-          <span className="theme-text-muted">Atoms: {structure.atomCount}</span>
+        <div className="flex items-center justify-end text-xs">
           <div className="flex gap-1.5">
             <button
               type="button"
@@ -214,6 +215,15 @@ export function ExampleStructureGrid() {
   const thumbnails = useSnapshotRenderer(structures);
 
   const filtered = zFilter === "all" ? structures : structures.filter((s) => s.zValue === zFilter);
+
+  const displayIndices = new Map<number, number>();
+  const zCounters = new Map<number, number>();
+  for (const s of structures) {
+    const count = (zCounters.get(s.zValue) ?? 0) + 1;
+    zCounters.set(s.zValue, count);
+    displayIndices.set(s.index, count);
+  }
+
   const molInfo = getExampleMoleculeInfo();
 
   const zValues = [...new Set(structures.map((s) => s.zValue))].sort();
@@ -280,6 +290,7 @@ export function ExampleStructureGrid() {
           <StructureCard
             key={structure.index}
             structure={structure}
+            displayIndex={displayIndices.get(structure.index) ?? structure.index + 1}
             thumbnailUrl={thumbnails[structure.index] ?? null}
             onView={() => setViewerStructure(structure)}
           />
@@ -290,6 +301,7 @@ export function ExampleStructureGrid() {
         <StructureViewerModal
           structure={viewerStructure}
           structures={filtered}
+          displayIndices={displayIndices}
           onClose={() => setViewerStructure(null)}
           onNavigate={handleNavigate}
         />

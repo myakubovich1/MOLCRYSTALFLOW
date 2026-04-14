@@ -10,6 +10,7 @@ import { ResultsDashboard } from "@/components/results/results-dashboard";
 interface ResultsPaneProps {
   jobId?: string | null;
   context?: "workspace" | "detail";
+  onReset?: () => void;
 }
 
 const progressSteps = [
@@ -106,7 +107,7 @@ function FailedResultsView({ snapshot }: { snapshot: DesktopJobSnapshot }) {
   );
 }
 
-export function ResultsPane({ jobId, context = "workspace" }: ResultsPaneProps) {
+export function ResultsPane({ jobId, context = "workspace", onReset }: ResultsPaneProps) {
   const [snapshot, setSnapshot] = useState<DesktopJobSnapshot | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -190,7 +191,7 @@ export function ResultsPane({ jobId, context = "workspace" }: ResultsPaneProps) 
   }
 
   if (completedResult) {
-    return <ResultsDashboard job={completedResult} />;
+    return <ResultsDashboard job={completedResult} onReset={onReset} />;
   }
 
   return <PendingResultsView snapshot={snapshot} />;

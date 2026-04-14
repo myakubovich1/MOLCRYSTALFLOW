@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 
 import { InteractiveStructureViewer } from "@/components/results/interactive-structure-viewer";
 import type { JobResult } from "@/lib/types";
@@ -6,6 +6,7 @@ import { formatZValues } from "@/lib/utils";
 
 interface ResultsDashboardProps {
   job: JobResult;
+  onReset?: () => void;
 }
 
 function SummaryBar({ job }: { job: JobResult }) {
@@ -59,12 +60,24 @@ function BulkDownloads({ job }: { job: JobResult }) {
   );
 }
 
-export function ResultsDashboard({ job }: ResultsDashboardProps) {
+export function ResultsDashboard({ job, onReset }: ResultsDashboardProps) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SummaryBar job={job} />
-        <BulkDownloads job={job} />
+        <div className="flex flex-wrap items-center gap-2">
+          <BulkDownloads job={job} />
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="theme-button-outline inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              New Generation
+            </button>
+          )}
+        </div>
       </div>
 
       <InteractiveStructureViewer

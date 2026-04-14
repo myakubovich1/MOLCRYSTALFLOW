@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useRef, useState } from "react";
-import { FileUp, LoaderCircle, UploadCloud } from "lucide-react";
+import { Atom, LoaderCircle, UploadCloud, X } from "lucide-react";
 
 import { BackendHealthIndicator } from "@/components/generate/backend-health-indicator";
 import { Panel } from "@/components/ui/panel";
@@ -184,7 +184,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         {inputMode === "upload-file" ? (
-          <div>
+          <div className="relative">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -215,6 +215,22 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
               )}
             </button>
 
+            {selectedFile && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedFile(null);
+                  setErrorMessage(null);
+                  if (inputRef.current) inputRef.current.value = "";
+                }}
+                className="theme-text-muted hover:theme-text-primary absolute right-3 top-3 rounded-full p-1 transition"
+                aria-label="Clear file"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+
             <input
               ref={inputRef}
               type="file"
@@ -240,7 +256,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
           onClick={loadExample}
           className="theme-button-accent inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium"
         >
-          <FileUp className="h-3.5 w-3.5" />
+          <Atom className="h-3.5 w-3.5" />
           Load example (C4H5N3O)
         </button>
 

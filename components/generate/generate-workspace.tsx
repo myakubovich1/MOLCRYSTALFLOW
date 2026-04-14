@@ -38,6 +38,17 @@ export function GenerateWorkspace({ initialJobId = null }: GenerateWorkspaceProp
     });
   }
 
+  function handleReset() {
+    setCurrentJobId(null);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("job");
+
+    startTransition(() => {
+      router.replace(nextParams.size > 0 ? `${pathname}?${nextParams.toString()}` : pathname, { scroll: false });
+    });
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -59,7 +70,7 @@ export function GenerateWorkspace({ initialJobId = null }: GenerateWorkspaceProp
           <GenerationPanel onJobCreated={handleJobCreated} />
         </aside>
         <section className="min-w-0">
-          <ResultsPane jobId={currentJobId} context="workspace" />
+          <ResultsPane jobId={currentJobId} context="workspace" onReset={currentJobId ? handleReset : undefined} />
         </section>
       </div>
     </div>

@@ -22,6 +22,7 @@ type ThreeDMolModule = {
 interface StructureViewerModalProps {
   structure: ExampleStructure;
   structures: ExampleStructure[];
+  displayIndices: Map<number, number>;
   onClose: () => void;
   onNavigate: (index: number) => void;
 }
@@ -40,7 +41,7 @@ function downloadXyz(structure: ExampleStructure) {
   URL.revokeObjectURL(url);
 }
 
-export function StructureViewerModal({ structure, structures, onClose, onNavigate }: StructureViewerModalProps) {
+export function StructureViewerModal({ structure, structures, displayIndices, onClose, onNavigate }: StructureViewerModalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<ThreeDMolViewer | null>(null);
   const [ready, setReady] = useState(false);
@@ -118,7 +119,7 @@ export function StructureViewerModal({ structure, structures, onClose, onNavigat
         <div className="flex items-center justify-between border-b border-[color:var(--surface-border)] px-5 py-3">
           <div className="flex items-center gap-3">
             <span className="theme-text-primary text-sm font-semibold">
-              Z={structure.zValue} #{structure.index + 1}
+              Z={structure.zValue} #{displayIndices.get(structure.index) ?? structure.index + 1}
             </span>
             <span className="theme-chip-accent rounded-full px-2.5 py-0.5 text-xs">{structure.formula}</span>
             <span className="theme-text-muted text-xs">{structure.atomCount} atoms</span>
