@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <AppFrame>
+    <AppFrame wide>
       <AboutPageSections />
     </AppFrame>
   );
