@@ -1,4 +1,4 @@
-import type { AtomCoordinate, ParsedAtom, XyzParseResult } from "@/lib/types";
+import type { AtomCoordinate, LatticeParameters, ParsedAtom, XyzParseResult } from "@/lib/types";
 
 export function normalizeAtomSymbol(raw: string) {
   const letters = raw.replace(/[^a-z]/gi, "");
@@ -92,6 +92,42 @@ export function parseXyzText(contents: string): XyzParseResult {
 }
 
 export const parseXyzFile = parseXyzText;
+
+export function parseLatticeFromComment(commentLine: string): LatticeParameters | null {
+  const match = commentLine.match(/Lattice="([^"]+)"/);
+  if (!match) return null;
+
+  const values = match[1].trim().split(/\s+/).map(Number);
+  if (values.length !== 9 || values.some((v) => !Number.isFinite(v))) return null;
+
+  // 3x3 matrix: rows are lattice vectors a, b, c
+  const [a1, a2, a3, b1, b2, b3, c1, c2, c3] = values;
+
+  const aLen = Math.sqrt(a1 * a1 + a2 * a2 + a3 * a3);
+  const bLen = Math.sqrt(b1 * b1 + b2 * b2 + b3 * b3);
+  const cLen = Math.sqrt(c1 * c1 + c2 * c2 + c3 * c3);
+
+  const toDeg = 180 / Math.PI;
+  const alpha = Math.acos((b1 * c1 + b2 * c2 + b3 * c3) / (bLen * cLen)) * toDeg;
+  const beta = Math.acos((a1 * c1 + a2 * c2 + a3 * c3) / (aLen * cLen)) * toDeg;
+  const gamma = Math.acos((a1 * b1 + a2 * b2 + a3 * b3) / (aLen * bLen)) * toDeg;
+
+  // Volume = |a . (b x c)|
+  const crossX = b2 * c3 - b3 * c2;
+  const crossY = b3 * c1 - b1 * c3;
+  const crossZ = b1 * c2 - b2 * c1;
+  const volume = Math.abs(a1 * crossX + a2 * crossY + a3 * crossZ);
+
+  return {
+    a: Number(aLen.toFixed(3)),
+    b: Number(bLen.toFixed(3)),
+    c: Number(cLen.toFixed(3)),
+    alpha: Number(alpha.toFixed(2)),
+    beta: Number(beta.toFixed(2)),
+    gamma: Number(gamma.toFixed(2)),
+    volume: Number(volume.toFixed(1)),
+  };
+}
 
 export function splitMultiXyzText(contents: string) {
   const rawLines = contents.split(/\r?\n/);

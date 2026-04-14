@@ -156,3 +156,13 @@ export interface SubmitJobResponse {
   status?: JobStatus;
   error?: string;
 }
+
+export interface ExampleStructure {
+  index: number;
+  zValue: number;
+  atomCount: number;
+  formula: string;
+  lattice: LatticeParameters;
+  xyzText: string;
+  thumbnailDataUrl?: string;
+}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Atom, LoaderCircle } from "lucide-react";
+import { AlertTriangle, LoaderCircle } from "lucide-react";
 
 import { buildCompletedJobResult, normalizeDesktopJobStatus, type DesktopJobSnapshot } from "@/lib/desktop-backend";
+import { ExampleStructureGrid } from "@/components/results/example-structure-grid";
 import { ResultsDashboard } from "@/components/results/results-dashboard";
 
 interface ResultsPaneProps {
@@ -57,12 +58,7 @@ function ProgressStepper({ status }: { status: "queued" | "running" }) {
 }
 
 function ResultsPaneEmpty() {
-  return (
-    <div className="flex items-center gap-3 py-16 justify-center">
-      <Atom className="theme-text-muted h-5 w-5" />
-      <p className="theme-text-secondary text-sm">No structures generated yet. Enter a conformer and click &ldquo;Generate Structures&rdquo; to begin.</p>
-    </div>
-  );
+  return <ExampleStructureGrid />;
 }
 
 function PendingResultsView({ snapshot }: { snapshot: DesktopJobSnapshot }) {
