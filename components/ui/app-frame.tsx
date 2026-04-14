@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Orbit } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { TopNav } from "@/components/ui/top-nav";
@@ -19,9 +19,7 @@ export function AppFrame({ children, wide = false }: AppFrameProps) {
       <header className="relative z-10 border-b border-[color:var(--header-border)]">
         <div className={`mx-auto flex w-full items-center justify-between gap-4 px-6 py-4 lg:px-8 2xl:px-10 ${wide ? "max-w-none" : "max-w-7xl"}`}>
           <Link href="/" className="group inline-flex items-center gap-3">
-            <span className="theme-icon-shell-accent flex h-9 w-9 items-center justify-center rounded-xl">
-              <Orbit className="h-4.5 w-4.5" />
-            </span>
+            <Image src="/logo.svg" alt="MolCrystalFlow" width={36} height={36} className="rounded-lg" />
             <span className="theme-text-primary text-sm font-semibold tracking-wide">MolCrystalFlow</span>
           </Link>
 
