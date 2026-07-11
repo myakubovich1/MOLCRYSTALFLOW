@@ -36,7 +36,7 @@ export function BackendHealthIndicator() {
     }
 
     void fetchHealth();
-    const intervalId = window.setInterval(fetchHealth, 15000);
+    const intervalId = window.setInterval(fetchHealth, 60000);
 
     return () => {
       cancelled = true;

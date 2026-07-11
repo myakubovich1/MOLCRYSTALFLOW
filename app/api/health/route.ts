@@ -36,6 +36,10 @@ export async function GET() {
         (typeof payload?.detail === "string" && payload.detail) ||
         (typeof payload?.status === "string" && payload.status) ||
         "Desktop backend reachable.",
+      capabilities:
+        typeof payload?.capabilities === "object" && payload.capabilities !== null
+          ? payload.capabilities
+          : undefined,
     });
   } catch (error) {
     return Response.json(

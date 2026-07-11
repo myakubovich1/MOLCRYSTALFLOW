@@ -17,7 +17,10 @@ const sfMono = localFont({
   variable: "--font-mono",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "MolCrystalFlow",
     template: "%s | MolCrystalFlow",
@@ -30,6 +33,24 @@ export const metadata: Metadata = {
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "MolCrystalFlow",
+    description: "Generate candidate crystal packings from a molecular conformer with interactive 3D previews.",
+    images: [
+      {
+        url: "/brand/MCF_OpenGraph_1200x630.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MolCrystalFlow",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MolCrystalFlow",
+    description: "Generate candidate crystal packings from a molecular conformer with interactive 3D previews.",
+    images: ["/brand/MCF_OpenGraph_1200x630.jpg"],
   },
 };
 

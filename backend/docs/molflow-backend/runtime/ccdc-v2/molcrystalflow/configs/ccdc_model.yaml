@@ -1,0 +1,32 @@
+model:
+  node_embed_size: 256
+  edge_embed_size: 128
+  bb_node_embed_size: 256
+  num_layers: 4
+  act_fn: silu
+  node_features:
+    c_s: ${model.node_embed_size}
+    c_bb_input: ${model.bb_embedder.c_node_dim}
+    c_bb_emb: 128
+    c_timestep_emb: 256
+    node_extra_dim: 13  # 1 (bb_num_vec) + 7 (geometric) + 5 (basic)
+  edge_features:
+    c_s: ${model.node_embed_size}
+    c_p: ${model.edge_embed_size}
+    max_radius: .inf
+    max_neighbors: 1000
+    trans_n_freqs: 32
+    rot_n_freqs: 32
+    dist_emb: sin
+    rot_dist_emb: sin
+    inclination_emb_dim: 32
+    represent_angle_edge_to_lattice: true
+  bb_embedder:
+    c_node_dim: ${model.bb_node_embed_size}
+    c_edge_dim: ${model.bb_node_embed_size}
+    c_hidden_dim: ${model.bb_node_embed_size}
+    max_radius: 6
+    max_neighbors: 100
+    num_layers: 4
+    num_atom_types: 119
+    use_attention_pooling: True

@@ -11,8 +11,10 @@ const DEMO_SOURCES: DemoSource[] = [
   { file: "/demo/crystals_z4.xyz", zValue: 4 },
 ];
 
+const MAX_EXAMPLE_STRUCTURES_PER_Z = 10;
+
 function parseStructuresFromXyz(rawText: string, zValue: number, startIndex: number): ExampleStructure[] {
-  const blocks = splitMultiXyzText(rawText);
+  const blocks = splitMultiXyzText(rawText).slice(0, MAX_EXAMPLE_STRUCTURES_PER_Z);
 
   return blocks.map((block, i) => {
     const parsed = parseXyzText(block);

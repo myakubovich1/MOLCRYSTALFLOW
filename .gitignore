@@ -8,3 +8,9 @@ coverage
 vercel-env.d.ts
 .env.local
 .env*.local
+molcrystalflow_v2.zip
+backend/**/jobs/
+backend/**/smoke-output/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/.env

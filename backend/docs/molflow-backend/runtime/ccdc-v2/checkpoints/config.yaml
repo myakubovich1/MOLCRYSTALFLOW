@@ -1,0 +1,137 @@
+data:
+  task: molcrystal_csp
+  dataset: ccdc
+  cache_dir: /blue/mingjieliu/c.zeng/software/pylibs/MolCrystalFlow/data-preprocess/ccdc-stage1/preprocessed/normalized-original
+  loader:
+    num_workers: 1
+    prefetch_factor: 24
+    batch_size:
+      train: 128
+      valid: 128
+      test: 128
+interpolant:
+  min_t: 0.01
+  rots:
+    corrupt: true
+    batch_ot: false
+    sample_schedule: exp
+    exp_rate: 10
+    prior_type: symmetric
+  trans:
+    corrupt: true
+    batch_ot: false
+    sample_schedule: linear
+    scaling: 10.0
+    prior_type: uniform
+  lattice:
+    corrupt: true
+    lognormal:
+      loc: ${lattice.lognormal.loc}
+      scale: ${lattice.lognormal.scale}
+    uniform:
+      low: 60.0
+      high: 120.0
+      eps: 0.1
+  sampling:
+    num_timesteps: 50
+experiment:
+  debug: false
+  seed: 123
+  num_devices: 1
+  warm_start: null
+  warm_start_cfg_override: true
+  training:
+    trans_scale: 1.0
+    translation_loss_weight: 2.0
+    t_normalize_clip: 0.9
+    rotation_loss_weights: 1.0
+    cell_loss_weight: 0.1
+  wandb:
+    name: ccdc_csp_full_stage1
+    project: ccdc-mcf
+    save_dir: ${paths.wandb_dir}
+  wandb_watch:
+    log: all
+    log_freq: 500
+  optimizer:
+    lr: 0.0001
+    betas:
+    - 0.9
+    - 0.98
+    eps: 1.0e-08
+    weight_decay: 0.01
+  use_lr_scheduler: true
+  lr_scheduler:
+    factor: 0.6
+    patience: 10
+    min_lr: 1.0e-06
+  trainer:
+    overfit_batches: 0
+    min_epochs: 1
+    max_epochs: 1000
+    accelerator: auto
+    log_every_n_steps: 1
+    deterministic: false
+    val_check_interval: 1.0
+    check_val_every_n_epoch: 1
+    accumulate_grad_batches: 1
+    gradient_clip_val: 0.5
+    strategy: ddp
+  checkpointer:
+    dirpath: ${paths.ckpt_dir}
+    save_last: true
+    save_top_k: 3
+    monitor: valid/loss
+    filename: epoch_{epoch}-step_{step}-loss_{valid/loss:.4f}
+    auto_insert_metric_name: false
+    mode: min
+  inference_dir: null
+model:
+  node_embed_size: 256
+  edge_embed_size: 128
+  bb_node_embed_size: 256
+  num_layers: 4
+  act_fn: silu
+  node_features:
+    c_s: ${model.node_embed_size}
+    c_bb_input: ${model.bb_embedder.c_node_dim}
+    c_bb_emb: 128
+    c_timestep_emb: 256
+    node_extra_dim: 13
+  edge_features:
+    c_s: ${model.node_embed_size}
+    c_p: ${model.edge_embed_size}
+    max_radius: .inf
+    max_neighbors: 1000
+    trans_n_freqs: 32
+    rot_n_freqs: 32
+    dist_emb: sin
+    rot_dist_emb: sin
+    inclination_emb_dim: 32
+    represent_angle_edge_to_lattice: true
+  bb_embedder:
+    c_node_dim: ${model.bb_node_embed_size}
+    c_edge_dim: ${model.bb_node_embed_size}
+    c_hidden_dim: ${model.bb_node_embed_size}
+    max_radius: 6
+    max_neighbors: 100
+    num_layers: 4
+    num_atom_types: 119
+    use_attention_pooling: true
+paths:
+  root_dir: .
+  log_dir: ${paths.root_dir}/runs-ccdc-mcf/${experiment.wandb.name}
+  wandb_dir: ${paths.root_dir}/runs-ccdc-mcf
+  ckpt_dir: ${paths.log_dir}/ckpt
+  inference_dir: ${paths.log_dir}/inference
+  data_dir: ${paths.root_dir}/data-preprocess/ccdc-stage1/preprocessed/normalized
+lattice:
+  lognormal:
+    loc:
+    - 2.1068644098791802
+    - 2.467023280870836
+    - 2.854385083870894
+    scale:
+    - 0.26593195064115843
+    - 0.24236276595702655
+    - 0.30648477754768183

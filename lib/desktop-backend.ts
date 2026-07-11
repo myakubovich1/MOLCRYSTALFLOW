@@ -1,4 +1,11 @@
-import type { JobResult, JobStatus, ResultFile, SubmitInputMode, SubmitJobResponse } from "@/lib/types";
+import type {
+  FilterSummary,
+  JobResult,
+  JobStatus,
+  ResultFile,
+  SubmitInputMode,
+  SubmitJobResponse,
+} from "@/lib/types";
 
 interface RecordValue {
   [key: string]: unknown;
@@ -12,6 +19,8 @@ export interface DesktopJobSnapshot {
   formula?: string;
   atomCount?: number;
   candidateCount?: number;
+  generatedCandidateCount?: number;
+  filterSummary?: FilterSummary;
   zValues: number[];
   artifacts: ResultFile[];
   logTail: string[];
@@ -68,6 +77,24 @@ function pickArray(record: RecordValue, keys: string[]) {
   return undefined;
 }
 
+function pickBoolean(record: RecordValue, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (["true", "1", "yes", "on"].includes(normalized)) return true;
+      if (["false", "0", "no", "off"].includes(normalized)) return false;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeSubmitInputMode(value: unknown): SubmitInputMode | undefined {
   if (value === "upload" || value === "paste") {
     return value;
@@ -110,9 +137,23 @@ function formatBytes(bytes?: number) {
 function describeArtifact(name: string) {
   const lower = name.toLowerCase();
 
+  if (lower === "candidates.json") {
+    return {
+      description: "Per-candidate filtering metrics, energies, statuses, and rejection reasons.",
+      kind: "manifest" as const,
+    };
+  }
+
+  if (lower.startsWith("raw_")) {
+    return {
+      description: "Unfiltered generator output retained for audit and downstream analysis.",
+      kind: "raw-candidate-set" as const,
+    };
+  }
+
   if (lower === "pred_combined.xyz") {
     return {
-      description: "Combined candidate bundle returned by the desktop backend.",
+      description: "Combined candidate bundle accepted by the configured filters.",
       kind: "bundle" as const,
     };
   }
@@ -121,7 +162,7 @@ function describeArtifact(name: string) {
 
   if (matchedZValue) {
     return {
-      description: `Candidate subset exported for Z = ${matchedZValue[1]} inspection.`,
+      description: `Accepted candidate subset for Z = ${matchedZValue[1]}.`,
       kind: "candidate-set" as const,
     };
   }
@@ -250,6 +291,33 @@ function normalizeZValues(record: RecordValue, artifacts: ResultFile[]) {
   return inferZValuesFromArtifacts(artifacts);
 }
 
+function normalizeFilterSummary(value: unknown): FilterSummary | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const read = (keys: string[]) => pickNumber(value, keys) ?? 0;
+
+  return {
+    generatedCount: read(["generatedCount", "generated_count"]),
+    geometryPassedCount: read(["geometryPassedCount", "geometry_passed_count"]),
+    geometryRejectedCount: read(["geometryRejectedCount", "geometry_rejected_count"]),
+    clashRejectedCount: read(["clashRejectedCount", "clash_rejected_count"]),
+    potentialAttemptedCount: read(["potentialAttemptedCount", "potential_attempted_count"]),
+    potentialFailedCount: read(["potentialFailedCount", "potential_failed_count"]),
+    potentialCrashRate: read(["potentialCrashRate", "potential_crash_rate"]),
+    energyRejectedCount: read(["energyRejectedCount", "energy_rejected_count"]),
+    acceptedCount: read(["acceptedCount", "accepted_count"]),
+    energyRankedCount: pickNumber(value, ["energyRankedCount", "energy_ranked_count"]),
+    energyRankingAvailable: pickBoolean(value, ["energyRankingAvailable", "energy_ranking_available"]),
+    energyRankingUnavailableReason: pickString(value, ["energyRankingUnavailableReason", "energy_ranking_unavailable_reason"]),
+    rankingMode: pickString(value, ["rankingMode", "ranking_mode"]),
+    potentialProvider: pickString(value, ["potentialProvider", "potential_provider"]),
+    potentialModel: pickString(value, ["potentialModel", "potential_model"]),
+    rigidBodySteps: pickNumber(value, ["rigidBodySteps", "rigid_body_steps"]),
+  };
+}
+
 export function parseSubmitResponse(value: unknown): SubmitJobResponse {
   if (!isRecord(value)) {
     throw new Error("Desktop backend returned an invalid submit response.");
@@ -292,6 +360,8 @@ export function normalizeDesktopJobStatus(value: unknown, expectedJobId: string)
     formula: pickString(value, ["formula", "molecularFormula", "molecular_formula"]),
     atomCount: pickNumber(value, ["atomCount", "atom_count"]),
     candidateCount: inferCandidateCount(value, artifacts),
+    generatedCandidateCount: pickNumber(value, ["generatedCandidateCount", "generated_candidate_count"]),
+    filterSummary: normalizeFilterSummary(value.filterSummary ?? value.filter_summary),
     zValues: normalizeZValues(value, artifacts),
     artifacts,
     logTail,
@@ -308,12 +378,16 @@ export function buildCompletedJobResult(snapshot: DesktopJobSnapshot): JobResult
     formula: snapshot.formula ?? "Pending formula",
     atomCount: snapshot.atomCount ?? 0,
     candidateCount: snapshot.candidateCount ?? 0,
+    generatedCandidateCount: snapshot.generatedCandidateCount,
+    filterSummary: snapshot.filterSummary,
     zValues: snapshot.zValues,
     resultFiles: snapshot.artifacts,
     previewCandidates: [],
     status: "completed",
     stage: "completed",
-    note: "This connected backend run returns generated candidate structures for research use. It does not represent final validated crystal ranking.",
+    note: snapshot.filterSummary?.energyRankingAvailable
+      ? "This connected backend run returns geometry-filtered candidates ranked by UMA-s-1p2 after rigid-body optimization."
+      : "This connected backend run returns generated candidate structures for research use. It does not represent final validated crystal ranking.",
     description: "Candidate structure artifacts returned by the connected desktop backend through the website bridge.",
     generationMode: "Desktop backend execution",
     completionState: "Completed",

@@ -3,16 +3,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Eye, Atom, LoaderCircle } from "lucide-react";
 
+import {
+  crystalPackingRepeats,
+  drawCrystalLattice,
+  getCrystalStyleSpec,
+} from "@/components/results/crystal-viewer-utils";
 import { StructureViewerModal } from "@/components/results/structure-viewer-modal";
 import { useTheme } from "@/components/theme/theme-provider";
 import { loadExampleStructures, getExampleMoleculeInfo } from "@/lib/example-structures";
 import type { ExampleStructure, LatticeParameters } from "@/lib/types";
+import { parseXyzText } from "@/lib/xyz";
 
 type ThreeDMolViewer = {
   clear: () => void;
   addModel: (data?: string, format?: string, options?: unknown) => unknown;
+  addLine: (spec?: Record<string, unknown>) => unknown;
   setStyle: (sel: Record<string, unknown>, style?: Record<string, unknown>) => unknown;
   setBackgroundColor: (color: number | string, alpha?: number) => unknown;
+  setProjection: (projection: "orthographic" | "perspective") => unknown;
+  zoom: (factor?: number, animationDuration?: number, fixedPath?: boolean) => unknown;
   zoomTo: () => unknown;
   render: () => unknown;
   resize: () => unknown;
@@ -165,12 +174,15 @@ function useSnapshotRenderer(structures: ExampleStructure[], resolvedTheme: stri
 
         viewer.clear();
         viewer.setBackgroundColor(bg, 1);
+        viewer.setProjection("orthographic");
         viewer.addModel(structure.xyzText, "xyz");
-        viewer.setStyle({}, {
-          stick: { radius: 0.15, colorscheme: "Jmol" },
-          sphere: { scale: 0.25, colorscheme: "Jmol" },
-        });
+        viewer.setStyle({}, getCrystalStyleSpec("ball-stick"));
+        const parsedStructure = parseXyzText(structure.xyzText);
+        if (parsedStructure.latticeVectors) {
+          drawCrystalLattice(viewer, parsedStructure.latticeVectors, crystalPackingRepeats.cell);
+        }
         viewer.zoomTo();
+        viewer.zoom(1.85);
         viewer.render();
 
         // Wait for render to complete before capturing

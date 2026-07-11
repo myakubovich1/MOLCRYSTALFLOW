@@ -1,15 +1,16 @@
 # MolCrystalFlow Demo
 
-MolCrystalFlow Demo is a frontend-first research prototype for accepting molecular conformer input and previewing generated crystal structure candidates in demo mode.
+MolCrystalFlow Demo is a frontend for accepting molecular conformer input,
+submitting it to the lab MolFlow backend, and previewing generated crystal
+structure candidates.
 
-The current app is intentionally mock-first:
+The current app supports the lab desktop backend:
 
 - molecular input is normalized into a shared submission contract before it reaches the API layer
-- the current checked-in UI submits through the `.xyz` upload path, and the same normalization layer supports pasted XYZ and manual atom rows for future UI wiring
-- job submission flows through a local mock API route that now consumes one normalized payload shape
-- processing is staged in the UI to resemble a future compute workflow
-- results and downloadable artifacts are precomputed demo assets
-- no SSH, Slurm, HiPerGator, or scientific backend is contacted in version 1
+- job submission is proxied through Next.js API routes so backend tokens stay server-side
+- generated artifacts are loaded from the backend and previewed in the browser
+- geometry/clash filtering is reported from backend candidate metadata
+- UMA-s-1p2 energy ranking is displayed when the backend reports it is available
 
 ## Stack
 
@@ -27,6 +28,19 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+The frontend expects `.env.local` to contain:
+
+```bash
+DESKTOP_BACKEND_URL=http://10.136.38.140:8000
+DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
+NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
+NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
+NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.example.com
+```
+
+For local lab use, replace `DESKTOP_BACKEND_URL` with the current lab computer
+IP from `hostname -I`.
+
 ## Build
 
 ```bash
@@ -39,20 +53,75 @@ npm run build
 - `app/page.tsx` landing and upload flow
 - `app/processing/page.tsx` staged mock workflow
 - `app/results/[id]/page.tsx` demo result dashboard
-- `app/api/mock-submit/route.ts` mock submission and retrieval route
+- `app/api/jobs/*` and `app/api/health/route.ts` proxy the lab backend
 - `components/` reusable UI and workflow components
-- `lib/` typed helpers, input normalization, `.xyz` parsing/serialization, mock submission adapter, demo result generation, cookie-backed mock session storage
+- `lib/` typed helpers, input normalization, `.xyz` parsing/serialization, backend response normalization, and viewer helpers
 - `data/demo-result.json` static mock result template
 - `public/demo/` downloadable demo artifacts
+- `backend/docs/molflow-backend/` server-copyable FastAPI backend bundle
 
-## Future backend handoff
+## Lab Backend
 
-The app is organized so the mock route can later be replaced by a real submission layer that:
+Backend setup and copy-to-server instructions live in
+`backend/docs/molflow-backend/README.md`.
 
-- receives a normalized molecular submission payload from any input mode
-- uploads the canonical XYZ payload to a lab workstation or HPC entrypoint
-- creates and tracks a queued generation job
-- polls status until outputs are ready
-- returns real candidate files and metadata
+Daily lab workflow:
 
-The UI copy already reflects the current scientific scope: generated candidate structures in research preview mode, not experimentally validated final crystal predictions.
+```bash
+source ~/miniforge3/etc/profile.d/conda.sh
+conda activate molcrystalflow
+cd ~/molflow-backend
+bash start.sh
+```
+
+The backend is configured for UMA-s-1p2 ranking after exactly 10 rigid-body
+optimization steps through the lab `csp-pipeline` implementation. The frontend
+does not expose backend tokens to the browser.
+
+## Vercel Deployment
+
+The deployable setup keeps the GPU backend on the Ubuntu lab computer and hosts
+only the Next.js web app on Vercel:
+
+```text
+Browser -> Vercel Next.js app/API routes -> lab Ubuntu MolFlow backend
+```
+
+The lab backend must be reachable from Vercel through a public HTTPS URL,
+university reverse proxy, or approved tunnel. A private campus IP such as
+`http://10.x.x.x:8000` only works from devices on that network and will not be
+reachable by Vercel.
+
+Set these Vercel environment variables:
+
+```bash
+DESKTOP_BACKEND_URL=https://your-public-lab-backend.example.com
+DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
+NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
+NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
+NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.example.com
+```
+
+Do not prefix `DESKTOP_BACKEND_TOKEN` with `NEXT_PUBLIC_`; it must stay
+server-side in Vercel API routes.
+
+The daily generation limit is intentionally browser-side only. It stores a
+per-browser daily counter in `localStorage`, resets on the next calendar day,
+and unlocks extra generations for that browser when the promo code matches the
+public env value. This is lightweight bot/friction control, not a secure quota.
+
+To keep the backend running during a lab session, use `tmux`:
+
+```bash
+tmux new -s molflow
+source ~/miniforge3/etc/profile.d/conda.sh
+conda activate molcrystalflow
+cd ~/molflow-backend
+bash start.sh
+```
+
+Detach without stopping the backend with `Ctrl+B`, then `D`. Reattach later:
+
+```bash
+tmux attach -t molflow
+```

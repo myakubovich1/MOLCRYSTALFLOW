@@ -34,6 +34,8 @@ export interface XyzParseResult {
   atoms: ParsedAtom[];
   isValid: boolean;
   commentLine?: string;
+  latticeVectors?: LatticeVectors;
+  latticeParameters?: LatticeParameters;
 }
 
 export interface NormalizedInputSource {
@@ -91,7 +93,55 @@ export interface ResultFile {
   href: string;
   description: string;
   sizeLabel: string;
-  kind: "bundle" | "candidate-set";
+  kind: "bundle" | "candidate-set" | "raw-candidate-set" | "manifest";
+}
+
+export interface FilterSummary {
+  generatedCount: number;
+  geometryPassedCount: number;
+  geometryRejectedCount: number;
+  clashRejectedCount: number;
+  potentialAttemptedCount: number;
+  potentialFailedCount: number;
+  potentialCrashRate: number;
+  energyRejectedCount: number;
+  acceptedCount: number;
+  energyRankedCount?: number;
+  energyRankingAvailable?: boolean;
+  energyRankingUnavailableReason?: string;
+  rankingMode?: string;
+  potentialProvider?: string;
+  potentialModel?: string;
+  rigidBodySteps?: number;
+}
+
+export interface CandidateFilterRecord {
+  id: string;
+  zValue: number;
+  sourceIndex: number;
+  acceptedIndex?: number;
+  status: string;
+  accepted: boolean;
+  reasons: string[];
+  densityGcm3?: number;
+  minimumIntermolecularDistanceAngstrom?: number;
+  minimumVdwRatio?: number;
+  clashCount?: number;
+  clashRate?: number;
+  rank?: number;
+  energy?: number;
+  energyUnits?: string;
+  energyEvPerMolecule?: number;
+  relativeEnergyEvPerMolecule?: number;
+  maxForceEvPerAngstrom?: number;
+  potentialProvider?: string;
+  potentialModel?: string;
+  potentialStatus?: string;
+  rankingStatus?: string;
+  optimized?: boolean;
+  optimizationType?: string;
+  optimizationSteps?: number;
+  scoringError?: string;
 }
 
 export interface ViewerSource {
@@ -110,6 +160,14 @@ export interface LatticeParameters {
   beta: number;
   gamma: number;
   volume: number;
+}
+
+export type Vector3Tuple = [number, number, number];
+
+export interface LatticeVectors {
+  a: Vector3Tuple;
+  b: Vector3Tuple;
+  c: Vector3Tuple;
 }
 
 export interface CandidatePreview {
@@ -131,6 +189,8 @@ export interface JobResult {
   formula: string;
   atomCount: number;
   candidateCount: number;
+  generatedCandidateCount?: number;
+  filterSummary?: FilterSummary;
   zValues: number[];
   resultFiles: ResultFile[];
   previewCandidates: CandidatePreview[];

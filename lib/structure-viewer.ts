@@ -1,7 +1,7 @@
 import type { ResultFile, ViewerSource } from "@/lib/types";
 
 export function extractZValueFromArtifactName(name: string) {
-  const match = name.match(/crystals_z(\d+)\.xyz$/i);
+  const match = name.match(/^crystals_z(\d+)\.xyz$/i);
 
   if (!match) {
     return null;

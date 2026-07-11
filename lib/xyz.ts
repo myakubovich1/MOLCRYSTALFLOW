@@ -1,4 +1,4 @@
-import type { AtomCoordinate, LatticeParameters, ParsedAtom, XyzParseResult } from "@/lib/types";
+import type { AtomCoordinate, LatticeParameters, LatticeVectors, ParsedAtom, Vector3Tuple, XyzParseResult } from "@/lib/types";
 
 export function normalizeAtomSymbol(raw: string) {
   const letters = raw.replace(/[^a-z]/gi, "");
@@ -88,17 +88,39 @@ export function parseXyzText(contents: string): XyzParseResult {
     atoms,
     isValid,
     commentLine,
+    latticeVectors: parseLatticeVectorsFromComment(commentLine) ?? undefined,
+    latticeParameters: parseLatticeFromComment(commentLine) ?? undefined,
   };
 }
 
 export const parseXyzFile = parseXyzText;
 
-export function parseLatticeFromComment(commentLine: string): LatticeParameters | null {
+function getLatticeValuesFromComment(commentLine: string) {
   const match = commentLine.match(/Lattice="([^"]+)"/);
   if (!match) return null;
 
   const values = match[1].trim().split(/\s+/).map(Number);
   if (values.length !== 9 || values.some((v) => !Number.isFinite(v))) return null;
+
+  return values;
+}
+
+export function parseLatticeVectorsFromComment(commentLine: string): LatticeVectors | null {
+  const values = getLatticeValuesFromComment(commentLine);
+  if (!values) return null;
+
+  const [a1, a2, a3, b1, b2, b3, c1, c2, c3] = values;
+
+  return {
+    a: [a1, a2, a3],
+    b: [b1, b2, b3],
+    c: [c1, c2, c3],
+  };
+}
+
+export function parseLatticeFromComment(commentLine: string): LatticeParameters | null {
+  const values = getLatticeValuesFromComment(commentLine);
+  if (!values) return null;
 
   // 3x3 matrix: rows are lattice vectors a, b, c
   const [a1, a2, a3, b1, b2, b3, c1, c2, c3] = values;
@@ -127,6 +149,62 @@ export function parseLatticeFromComment(commentLine: string): LatticeParameters 
     gamma: Number(gamma.toFixed(2)),
     volume: Number(volume.toFixed(1)),
   };
+}
+
+function addVectors(left: Vector3Tuple, right: Vector3Tuple): Vector3Tuple {
+  return [left[0] + right[0], left[1] + right[1], left[2] + right[2]];
+}
+
+function scaleVector(vector: Vector3Tuple, scale: number): Vector3Tuple {
+  return [vector[0] * scale, vector[1] * scale, vector[2] * scale];
+}
+
+export function buildLatticeCorners(vectors: LatticeVectors) {
+  const origin: Vector3Tuple = [0, 0, 0];
+  const ab = addVectors(vectors.a, vectors.b);
+  const ac = addVectors(vectors.a, vectors.c);
+  const bc = addVectors(vectors.b, vectors.c);
+  const abc = addVectors(ab, vectors.c);
+
+  return [origin, vectors.a, vectors.b, ab, vectors.c, ac, bc, abc];
+}
+
+export function buildReplicatedXyzText(
+  structureText: string,
+  options: { a: number; b: number; c: number },
+) {
+  const parsed = parseXyzText(structureText);
+
+  if (!parsed.isValid || !parsed.latticeVectors || parsed.atoms.length === 0) {
+    return structureText;
+  }
+
+  const replicatedAtoms: AtomCoordinate[] = [];
+
+  for (let ai = 0; ai < options.a; ai += 1) {
+    for (let bi = 0; bi < options.b; bi += 1) {
+      for (let ci = 0; ci < options.c; ci += 1) {
+        const offset = addVectors(
+          addVectors(scaleVector(parsed.latticeVectors.a, ai), scaleVector(parsed.latticeVectors.b, bi)),
+          scaleVector(parsed.latticeVectors.c, ci),
+        );
+
+        parsed.atoms.forEach((atom) => {
+          replicatedAtoms.push({
+            symbol: atom.symbol,
+            x: atom.x + offset[0],
+            y: atom.y + offset[1],
+            z: atom.z + offset[2],
+          });
+        });
+      }
+    }
+  }
+
+  return atomCoordinatesToXyzText(
+    replicatedAtoms,
+    `${parsed.commentLine ?? "MolCrystalFlow candidate"} display="${options.a}x${options.b}x${options.c}"`,
+  );
 }
 
 export function splitMultiXyzText(contents: string) {

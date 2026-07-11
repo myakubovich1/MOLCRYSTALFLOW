@@ -1,0 +1,21 @@
+# Configuration for inference
+defaults:
+  - ccdc_molcrystal
+  - _self_
+  - ccdc_paths
+
+inference:
+  inference_dir: ../inference_outputs
+  name: ccdc_molcrystal_inference
+  seed: 123
+  task: null
+  # To override output directory, use: inference.output_dir=[path]
+  output_dir: ./inference_outputs/
+  ckpt_path: ${paths.ckpt_dir}/last.ckpt
+  use_gpu: True
+  num_gpus: 1
+  num_samples: 1
+  save_trajectories: True
+  # Optional: restrict inference to a single test structure (0-based index).
+  # Set via CLI: inference.struct_idx=5
+  struct_idx: null

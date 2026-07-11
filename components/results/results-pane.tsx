@@ -6,11 +6,14 @@ import { AlertTriangle, LoaderCircle } from "lucide-react";
 import { buildCompletedJobResult, normalizeDesktopJobStatus, type DesktopJobSnapshot } from "@/lib/desktop-backend";
 import { ExampleStructureGrid } from "@/components/results/example-structure-grid";
 import { ResultsDashboard } from "@/components/results/results-dashboard";
+import type { JobResult } from "@/lib/types";
 
 interface ResultsPaneProps {
   jobId?: string | null;
   context?: "workspace" | "detail";
   onReset?: () => void;
+  onSaveCompletedJob?: (job: JobResult) => void;
+  isJobSaved?: boolean;
 }
 
 const progressSteps = [
@@ -63,6 +66,11 @@ function ResultsPaneEmpty() {
 }
 
 function PendingResultsView({ snapshot }: { snapshot: DesktopJobSnapshot }) {
+  const statusMessage =
+    snapshot.status === "running"
+      ? "Generating candidate crystal packings and preparing ranked structures."
+      : "Submitting the molecular conformer to the generation backend.";
+
   return (
     <div className="space-y-4">
       <ProgressStepper status={snapshot.status === "running" ? "running" : "queued"} />
@@ -74,13 +82,12 @@ function PendingResultsView({ snapshot }: { snapshot: DesktopJobSnapshot }) {
         />
       </div>
 
-      {snapshot.logTail.length > 0 && (
-        <div className="theme-subpanel-soft rounded-xl p-4">
-          <pre className="theme-text-secondary overflow-x-auto whitespace-pre-wrap break-words font-[family:var(--font-mono)] text-xs leading-5">
-            {snapshot.logTail.slice(-8).join("\n")}
-          </pre>
-        </div>
-      )}
+      <div className="theme-subpanel-soft rounded-xl p-4">
+        <p className="theme-text-primary text-sm font-medium">Generation in progress</p>
+        <p className="theme-text-secondary mt-1 text-sm leading-6">
+          {statusMessage} Geometry validation, clash checks, and energy ranking are applied before results are shown.
+        </p>
+      </div>
     </div>
   );
 }
@@ -97,17 +104,28 @@ function FailedResultsView({ snapshot }: { snapshot: DesktopJobSnapshot }) {
       </div>
 
       {snapshot.logTail.length > 0 && (
-        <div className="theme-subpanel-soft rounded-xl p-4">
-          <pre className="theme-text-secondary overflow-x-auto whitespace-pre-wrap break-words font-[family:var(--font-mono)] text-xs leading-5">
-            {snapshot.logTail.slice(-12).join("\n")}
-          </pre>
-        </div>
+        <details className="theme-subpanel-soft rounded-xl">
+          <summary className="theme-text-secondary cursor-pointer px-4 py-3 text-sm font-medium">
+            Backend log
+          </summary>
+          <div className="border-t border-[color:var(--surface-border)] px-4 py-3">
+            <pre className="theme-text-secondary overflow-x-auto whitespace-pre-wrap break-words font-[family:var(--font-mono)] text-xs leading-5">
+              {snapshot.logTail.slice(-24).join("\n")}
+            </pre>
+          </div>
+        </details>
       )}
     </div>
   );
 }
 
-export function ResultsPane({ jobId, context = "workspace", onReset }: ResultsPaneProps) {
+export function ResultsPane({
+  jobId,
+  context = "workspace",
+  onReset,
+  onSaveCompletedJob,
+  isJobSaved = false,
+}: ResultsPaneProps) {
   const [snapshot, setSnapshot] = useState<DesktopJobSnapshot | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -120,7 +138,11 @@ export function ResultsPane({ jobId, context = "workspace", onReset }: ResultsPa
 
     const resolvedJobId = jobId;
     let isCancelled = false;
+    let timeoutId: number | null = null;
     let intervalId: number | null = null;
+
+    setSnapshot(null);
+    setRequestError(null);
 
     async function fetchStatus() {
       try {
@@ -147,11 +169,12 @@ export function ResultsPane({ jobId, context = "workspace", onReset }: ResultsPa
       }
     }
 
-    void fetchStatus();
+    timeoutId = window.setTimeout(fetchStatus, 750);
     intervalId = window.setInterval(fetchStatus, 4000);
 
     return () => {
       isCancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
       if (intervalId !== null) window.clearInterval(intervalId);
     };
   }, [jobId]);
@@ -191,7 +214,14 @@ export function ResultsPane({ jobId, context = "workspace", onReset }: ResultsPa
   }
 
   if (completedResult) {
-    return <ResultsDashboard job={completedResult} onReset={onReset} />;
+    return (
+      <ResultsDashboard
+        job={completedResult}
+        onReset={onReset}
+        onSave={onSaveCompletedJob}
+        isSaved={isJobSaved}
+      />
+    );
   }
 
   return <PendingResultsView snapshot={snapshot} />;
