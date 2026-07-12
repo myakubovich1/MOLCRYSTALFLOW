@@ -80,7 +80,7 @@ export function parseXyzText(contents: string): XyzParseResult {
 
   const isValid =
     atoms.length > 0 &&
-    (!Number.isNaN(declaredCount) ? Math.abs(declaredCount - atoms.length) <= 2 : true);
+    (!Number.isNaN(declaredCount) ? declaredCount === atoms.length : false);
 
   return {
     atomCount: atoms.length,

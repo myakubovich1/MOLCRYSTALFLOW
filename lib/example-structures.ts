@@ -1,4 +1,5 @@
 import type { ExampleStructure } from "@/lib/types";
+import { EXAMPLE_MOLECULE } from "@/lib/example-molecule";
 import { buildFormula, parseLatticeFromComment, parseXyzText, splitMultiXyzText } from "@/lib/xyz";
 
 interface DemoSource {
@@ -7,8 +8,7 @@ interface DemoSource {
 }
 
 const DEMO_SOURCES: DemoSource[] = [
-  { file: "/demo/crystals_z2.xyz", zValue: 2 },
-  { file: "/demo/crystals_z4.xyz", zValue: 4 },
+  { file: "/demo/cytosine_crystals_z2.xyz", zValue: 2 },
 ];
 
 const MAX_EXAMPLE_STRUCTURES_PER_Z = 10;
@@ -60,8 +60,8 @@ export async function loadExampleStructures(): Promise<ExampleStructure[]> {
 
 export function getExampleMoleculeInfo() {
   return {
-    name: "Cytosine",
-    formula: "C4H5N3O",
-    inputAtoms: 12,
+    name: EXAMPLE_MOLECULE.name,
+    formula: EXAMPLE_MOLECULE.formula,
+    inputAtoms: EXAMPLE_MOLECULE.atomCount,
   };
 }

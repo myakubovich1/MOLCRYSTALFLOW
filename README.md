@@ -31,22 +31,31 @@ Open `http://localhost:3000`.
 The frontend expects `.env.local` to contain:
 
 ```bash
-DESKTOP_BACKEND_URL=http://10.136.38.140:8000
+DESKTOP_BACKEND_URL=https://api.molcrystalflow.org
 DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
 NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
 NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
-NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.example.com
+NEXT_PUBLIC_SITE_URL=https://www.molcrystalflow.org
 ```
 
-For local lab use, replace `DESKTOP_BACKEND_URL` with the current lab computer
-IP from `hostname -I`.
+The public Cloudflare Tunnel hostname is stable, so local development does not
+depend on the lab computer's changing private IP address.
 
 ## Build
 
 ```bash
+npm run validate:demo
 npm run typecheck
 npm run build
 ```
+
+The bundled example is neutral cytosine (`C4H5N3O`, 13 explicit atoms) from
+PubChem CID 597, conformer `0000025500000001`. The static landing-page gallery
+contains candidates that passed the backend's pre-optimization geometry/clash
+checks and were ranked by UMA-s-1p2 after ten rigid-body optimization steps.
+Passing those automated checks does not establish physical stability or guarantee
+that every optimized periodic contact is clash-free. Run
+`npm run validate:demo` whenever the example input or gallery artifacts change.
 
 ## Project structure
 
@@ -95,11 +104,11 @@ reachable by Vercel.
 Set these Vercel environment variables:
 
 ```bash
-DESKTOP_BACKEND_URL=https://your-public-lab-backend.example.com
+DESKTOP_BACKEND_URL=https://api.molcrystalflow.org
 DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
 NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
 NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
-NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.example.com
+NEXT_PUBLIC_SITE_URL=https://www.molcrystalflow.org
 ```
 
 Do not prefix `DESKTOP_BACKEND_TOKEN` with `NEXT_PUBLIC_`; it must stay

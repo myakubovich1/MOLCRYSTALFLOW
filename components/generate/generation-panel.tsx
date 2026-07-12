@@ -7,6 +7,7 @@ import { Atom, LoaderCircle, UploadCloud, X } from "lucide-react";
 import { BackendHealthIndicator } from "@/components/generate/backend-health-indicator";
 import { Panel } from "@/components/ui/panel";
 import { parseSubmitResponse } from "@/lib/desktop-backend";
+import { CYTOSINE_XYZ, EXAMPLE_MOLECULE } from "@/lib/example-molecule";
 import {
   canSubmitGeneration,
   DAILY_FREE_GENERATION_LIMIT,
@@ -24,23 +25,9 @@ import {
 } from "@/lib/molecular-input";
 import type { InputMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { parseXyzText } from "@/lib/xyz";
 
 type GenerateInputMode = Extract<InputMode, "upload-file" | "paste-xyz">;
-
-const SAMPLE_XYZ = `12
-Cytosine conformer
-C   -1.4200   0.1400   0.0100
-C   -0.6800   1.3100   0.0900
-O    0.7100   1.1800   0.1400
-C    1.4500   0.0100   0.0600
-N    0.6300  -1.1300  -0.0600
-C   -0.7400  -1.0400  -0.1100
-H   -2.4900   0.2100   0.0300
-H   -1.2200   2.2600   0.1500
-H    1.2700   2.0900   0.2200
-H    2.5200   0.0300   0.1200
-H    1.0900  -2.0800  -0.1100
-H   -1.4100  -1.9200  -0.1900`;
 
 const inputModes: Array<{ value: GenerateInputMode; label: string }> = [
   { value: "upload-file", label: "Upload .xyz" },
@@ -149,8 +136,18 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   }
 
   function loadExample() {
+    const parsed = parseXyzText(CYTOSINE_XYZ);
+    if (
+      !parsed.isValid ||
+      parsed.atomCount !== EXAMPLE_MOLECULE.atomCount ||
+      parsed.formula !== EXAMPLE_MOLECULE.formula
+    ) {
+      setErrorMessage("The bundled cytosine example failed scientific validation.");
+      return;
+    }
+
     setInputMode("paste-xyz");
-    setPastedXyz(SAMPLE_XYZ);
+    setPastedXyz(CYTOSINE_XYZ);
     setErrorMessage(null);
     setSelectedFile(null);
   }
@@ -368,7 +365,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
           className="theme-button-accent inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium"
         >
           <Atom className="h-3.5 w-3.5" />
-          Load example (C4H5N3O)
+          Load {EXAMPLE_MOLECULE.name.toLowerCase()} example ({EXAMPLE_MOLECULE.formula})
         </button>
 
         <div className="space-y-3">

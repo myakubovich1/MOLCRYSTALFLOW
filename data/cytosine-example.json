@@ -1,0 +1,43 @@
+{
+  "name": "Cytosine",
+  "formula": "C4H5N3O",
+  "atomCount": 13,
+  "source": {
+    "provider": "PubChem",
+    "cid": 597,
+    "url": "https://pubchem.ncbi.nlm.nih.gov/compound/597",
+    "conformerId": "0000025500000001",
+    "method": "PubChem 3D conformer; MMFF94"
+  },
+  "comment": "Cytosine | PubChem CID 597 | 3D conformer 0000025500000001 | MMFF94",
+  "atoms": [
+    { "symbol": "O", "x": 2.2134, "y": 1.1188, "z": 0.0001 },
+    { "symbol": "N", "x": -0.0595, "y": 0.9816, "z": 0.0001 },
+    { "symbol": "N", "x": -2.4422, "y": 0.9214, "z": 0.0001 },
+    { "symbol": "N", "x": 1.2935, "y": -0.9744, "z": 0.0 },
+    { "symbol": "C", "x": -1.2406, "y": 0.2676, "z": -0.0001 },
+    { "symbol": "C", "x": -1.1643, "y": -1.0726, "z": -0.0002 },
+    { "symbol": "C", "x": 1.2088, "y": 0.4056, "z": -0.0003 },
+    { "symbol": "C", "x": 0.1908, "y": -1.6478, "z": 0.0003 },
+    { "symbol": "H", "x": -0.1331, "y": 1.9946, "z": 0.0003 },
+    { "symbol": "H", "x": -2.0223, "y": -1.7317, "z": -0.0003 },
+    { "symbol": "H", "x": 0.2351, "y": -2.7487, "z": 0.0005 },
+    { "symbol": "H", "x": -3.3089, "y": 0.3984, "z": 0.0003 },
+    { "symbol": "H", "x": -2.4533, "y": 1.9332, "z": 0.0006 }
+  ],
+  "bonds": [
+    { "from": 1, "to": 7, "order": 2 },
+    { "from": 2, "to": 5, "order": 1 },
+    { "from": 2, "to": 7, "order": 1 },
+    { "from": 2, "to": 9, "order": 1 },
+    { "from": 3, "to": 5, "order": 1 },
+    { "from": 3, "to": 12, "order": 1 },
+    { "from": 3, "to": 13, "order": 1 },
+    { "from": 4, "to": 7, "order": 1 },
+    { "from": 4, "to": 8, "order": 2 },
+    { "from": 5, "to": 6, "order": 2 },
+    { "from": 6, "to": 8, "order": 1 },
+    { "from": 6, "to": 10, "order": 1 },
+    { "from": 8, "to": 11, "order": 1 }
+  ]
+}

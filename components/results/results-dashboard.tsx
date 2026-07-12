@@ -1,4 +1,4 @@
-import { BookmarkCheck, BookmarkPlus, Download, RotateCcw } from "lucide-react";
+import { AlertTriangle, BookmarkCheck, BookmarkPlus, Download, RotateCcw } from "lucide-react";
 
 import { InteractiveStructureViewer } from "@/components/results/interactive-structure-viewer";
 import type { JobResult } from "@/lib/types";
@@ -179,6 +179,16 @@ export function ResultsDashboard({ job, onReset, onSave, isSaved = false }: Resu
       </div>
 
       <FilteringSummary job={job} />
+
+      <div className="theme-warning-panel flex items-start gap-3 rounded-xl px-4 py-3" role="note">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-medium">Scientific limitation</p>
+          <p className="mt-1 text-sm leading-6">
+            Passing the automated filters does not guarantee physical stability or the absence of all periodic clashes.
+          </p>
+        </div>
+      </div>
 
       <InteractiveStructureViewer
         jobId={job.id}
