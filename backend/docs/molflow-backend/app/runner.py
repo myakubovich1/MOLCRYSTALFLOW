@@ -19,6 +19,7 @@ from .config import (
     V2_CHECKPOINT_PATH,
     V2_CONFIG_PATH,
     V2_DEVICE,
+    V2_ALLOW_NEUTRAL_FEATURES,
     V2_FEATURE_FACTORY,
     V2_FEATURE_MODE,
     V2_GPU_LOCK_PATH,
@@ -72,6 +73,8 @@ def build_command(job_dir: Path, z_values: list[int], num_samples: int) -> list[
         ]
         if V2_REQUIRE_EXACT_FEATURES:
             cmd.append("--require-exact-features")
+        if V2_ALLOW_NEUTRAL_FEATURES:
+            cmd.append("--allow-neutral-features")
         return cmd
 
     cmd = [
@@ -155,6 +158,7 @@ def collect_outputs(
     atom_count: int | None,
     z_values: list[int],
     filtering_options: dict,
+    generation_seed: int | None = None,
 ) -> tuple[list[dict], dict | None]:
     ensure_dir(artifacts_dir)
 
@@ -170,6 +174,7 @@ def collect_outputs(
         input_atom_count=atom_count,
         z_values=z_values,
         options=filtering_options,
+        generation_seed=generation_seed,
     )
 
 
@@ -189,6 +194,7 @@ def run_job(
         "relaxationSteps": 0,
         "relaxationFmaxEvPerAngstrom": 0.2,
     }
+    generation_seed = int(job_id[:8], 16)
 
     job_dir = JOBS_DIR / job_id
     input_dir = job_dir / "input"
@@ -217,6 +223,7 @@ def run_job(
         "generatorBackend": GENERATOR_BACKEND,
         "modelVersion": V2_MODEL_NAME if GENERATOR_BACKEND == "ccdc_v2" else "omc25-legacy",
         "featureMode": V2_FEATURE_MODE if GENERATOR_BACKEND == "ccdc_v2" else "legacy",
+        "generationSeed": generation_seed,
     }
     write_json(status_path, status)
 
@@ -302,6 +309,7 @@ def run_job(
             atom_count,
             z_values,
             filtering_options,
+            generation_seed,
         )
     except Exception as error:
         artifacts = [

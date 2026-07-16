@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+import fcntl
 from importlib import import_module
+from importlib.metadata import PackageNotFoundError, version
 from inspect import Parameter, signature
 from math import sqrt
 from typing import Any
@@ -15,6 +17,7 @@ from .config import (
     RIGID_BODY_STEPS,
     UMA_MODEL,
     UMA_TASK_NAME,
+    V2_GPU_LOCK_PATH,
     csp_import_paths,
     potential_config_errors,
     rigid_body_config_errors,
@@ -32,11 +35,19 @@ class PotentialResult:
     max_force_ev_per_angstrom: float
     positions: list[tuple[float, float, float]]
     cell: list[tuple[float, float, float]]
+    initial_energy_ev: float | None = None
+    initial_max_force_ev_per_angstrom: float | None = None
     optimized: bool = False
     optimization_type: str | None = None
     optimization_steps: int = 0
+    optimization_protocol: str | None = None
+    optimization_converged: bool | None = None
     potential_provider: str | None = None
     potential_model: str | None = None
+    potential_task: str | None = None
+    potential_package_version: str | None = None
+    ase_version: str | None = None
+    force_kind: str = "ASE atomic force"
     energy_units: str = "eV"
 
 
@@ -274,14 +285,60 @@ def _load_calculator() -> Any:
 class PotentialEvaluator:
     def __init__(self) -> None:
         try:
-            from ase import Atoms
-        except ImportError as error:
-            raise PotentialConfigurationError(
-                "ASE is required for energy filtering. Install the backend potential dependencies."
-            ) from error
+            V2_GPU_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+            self._gpu_lock_file = V2_GPU_LOCK_PATH.open("w")
+            fcntl.flock(self._gpu_lock_file.fileno(), fcntl.LOCK_EX)
 
-        self._atoms_class = Atoms
-        self._calculator = _load_calculator()
+            try:
+                import ase
+                from ase import Atoms
+            except ImportError as error:
+                raise PotentialConfigurationError(
+                    "ASE is required for energy filtering. Install the backend potential dependencies."
+                ) from error
+
+            self._atoms_class = Atoms
+            self._ase_version = getattr(ase, "__version__", None)
+            package_name = "fairchem-core" if POTENTIAL_PROVIDER == "uma" else "mace-torch"
+            try:
+                self._potential_package_version = version(package_name)
+            except PackageNotFoundError:
+                self._potential_package_version = None
+            self._calculator = _load_calculator()
+        except Exception:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        lock_file = getattr(self, "_gpu_lock_file", None)
+        if lock_file is None:
+            return
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally:
+            lock_file.close()
+            self._gpu_lock_file = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    @staticmethod
+    def _maximum_force(atoms: Any) -> float:
+        forces = atoms.get_forces()
+        return max(
+            (
+                sqrt(
+                    float(force[0]) ** 2
+                    + float(force[1]) ** 2
+                    + float(force[2]) ** 2
+                )
+                for force in forces
+            ),
+            default=0.0,
+        )
 
     def evaluate(
         self,
@@ -298,10 +355,19 @@ class PotentialEvaluator:
             cell=cell,
             pbc=True,
         )
+        if POTENTIAL_PROVIDER == "uma" and UMA_TASK_NAME == "omc":
+            # The OMC task is trained for neutral, spin-zero molecular crystals.
+            # XYZ input does not carry charge or spin, so make that model-domain
+            # assumption explicit instead of relying on calculator defaults.
+            atoms.info.update({"charge": 0, "spin": 0})
         atoms.calc = self._calculator
+        initial_energy = float(atoms.get_potential_energy())
+        initial_max_force = self._maximum_force(atoms)
         optimized = False
         optimization_type: str | None = None
         optimization_steps = 0
+        optimization_protocol: str | None = None
+        optimization_converged: bool | None = None
 
         if POTENTIAL_PROVIDER == "uma":
             atoms = _run_rigid_body_optimization(
@@ -314,25 +380,27 @@ class PotentialEvaluator:
             optimized = True
             optimization_type = "rigid-body"
             optimization_steps = RIGID_BODY_STEPS
+            optimization_protocol = "fixed-step"
         elif relaxation_steps > 0:
             from ase.optimize import FIRE
 
             optimizer = FIRE(atoms, logfile=None)
-            optimizer.run(fmax=relaxation_fmax, steps=relaxation_steps)
+            optimization_converged = bool(
+                optimizer.run(fmax=relaxation_fmax, steps=relaxation_steps)
+            )
             optimized = True
             optimization_type = "ase-fire"
             optimization_steps = relaxation_steps
+            optimization_protocol = "force-threshold"
 
         energy = float(atoms.get_potential_energy())
-        forces = atoms.get_forces()
-        max_force = max(
-            (sqrt(float(force[0]) ** 2 + float(force[1]) ** 2 + float(force[2]) ** 2) for force in forces),
-            default=0.0,
-        )
+        max_force = self._maximum_force(atoms)
 
         return PotentialResult(
             energy_ev=energy,
             max_force_ev_per_angstrom=max_force,
+            initial_energy_ev=initial_energy,
+            initial_max_force_ev_per_angstrom=initial_max_force,
             positions=[
                 (float(position[0]), float(position[1]), float(position[2]))
                 for position in atoms.get_positions()
@@ -344,6 +412,16 @@ class PotentialEvaluator:
             optimized=optimized,
             optimization_type=optimization_type,
             optimization_steps=optimization_steps,
+            optimization_protocol=optimization_protocol,
+            optimization_converged=optimization_converged,
             potential_provider=POTENTIAL_PROVIDER,
             potential_model=UMA_MODEL if POTENTIAL_PROVIDER == "uma" else POTENTIAL_MODEL,
+            potential_task=UMA_TASK_NAME if POTENTIAL_PROVIDER == "uma" else None,
+            potential_package_version=self._potential_package_version,
+            ase_version=self._ase_version,
+            force_kind=(
+                "ASE constrained atomic force"
+                if POTENTIAL_PROVIDER == "uma"
+                else "ASE atomic force"
+            ),
         )

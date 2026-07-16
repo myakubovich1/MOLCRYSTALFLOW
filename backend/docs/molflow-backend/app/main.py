@@ -160,6 +160,7 @@ def create_job(payload: JobCreateRequest, authorization: str | None = Header(def
     filtering_options = payload.filtering.model_dump()
 
     job_id = new_job_id()
+    generation_seed = int(job_id[:8], 16)
     job_dir = JOBS_DIR / job_id
     input_dir = job_dir / "input"
     run_dir = job_dir / "run"
@@ -179,6 +180,7 @@ def create_job(payload: JobCreateRequest, authorization: str | None = Header(def
         "generatorBackend": GENERATOR_BACKEND,
         "modelVersion": V2_MODEL_NAME if GENERATOR_BACKEND == "ccdc_v2" else "omc25-legacy",
         "featureMode": V2_FEATURE_MODE if GENERATOR_BACKEND == "ccdc_v2" else "legacy",
+        "generationSeed": generation_seed,
     }
     write_json(run_dir / "meta.json", meta)
     write_json(
@@ -196,6 +198,7 @@ def create_job(payload: JobCreateRequest, authorization: str | None = Header(def
             "generatorBackend": meta["generatorBackend"],
             "modelVersion": meta["modelVersion"],
             "featureMode": meta["featureMode"],
+            "generationSeed": generation_seed,
             "error": None,
         },
     )
@@ -230,6 +233,7 @@ def create_job(payload: JobCreateRequest, authorization: str | None = Header(def
         generatorBackend=meta["generatorBackend"],
         modelVersion=meta["modelVersion"],
         featureMode=meta["featureMode"],
+        generationSeed=generation_seed,
         error=startup_error,
     )
 
@@ -279,6 +283,7 @@ def get_job(job_id: str, authorization: str | None = Header(default=None)):
         generatorBackend=status.get("generatorBackend", meta.get("generatorBackend")),
         modelVersion=status.get("modelVersion", meta.get("modelVersion")),
         featureMode=status.get("featureMode", meta.get("featureMode")),
+        generationSeed=status.get("generationSeed", meta.get("generationSeed")),
         error=status.get("error"),
     )
 

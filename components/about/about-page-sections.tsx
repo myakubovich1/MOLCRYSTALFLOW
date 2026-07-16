@@ -13,7 +13,7 @@ export function AboutPageSections() {
           <p className="theme-text-secondary mt-5 text-base leading-8 max-w-prose">
             MolCrystalFlow is a web interface for molecular crystal candidate generation.
             Given a molecular conformer as input, the system generates candidate crystal
-            packings, filters physically invalid outputs, ranks accepted candidates by
+            packings, applies automated geometry screening, ranks accepted candidates by
             learned interatomic-potential energy, and returns downloadable structure files
             with interactive 3D previews.
           </p>
@@ -64,9 +64,9 @@ export function AboutPageSections() {
             </p>
             <p>
               The current workflow applies geometry validation and periodic molecular clash
-              filtering before ranking accepted candidates with UMA-s-1p2 energies after
-              10 rigid-body optimization steps. Energy is used for ranking, not as an
-              automatic cutoff.
+              screening before and after 10 rigid-body optimization steps. Candidates that
+              pass the final screen are ranked with UMA-s-1p2 using its molecular-crystal
+              OMC task. Energy is used for ranking, not as an automatic cutoff.
             </p>
             <p>
               Outputs are computational candidates intended for inspection and downstream
@@ -86,7 +86,7 @@ export function AboutPageSections() {
             <div className="theme-subpanel rounded-2xl p-5">
               <p className="theme-text-muted text-xs font-medium uppercase tracking-wider">Ranking</p>
               <p className="theme-text-primary mt-2 text-base font-medium">UMA-s-1p2</p>
-              <p className="theme-text-secondary mt-0.5 text-xs">Rigid-body optimization followed by potential-energy ranking</p>
+              <p className="theme-text-secondary mt-0.5 text-xs">OMC task, 10-step rigid-body optimization, and relative potential-energy ranking</p>
             </div>
             <div className="theme-subpanel rounded-2xl p-5">
               <p className="theme-text-muted text-xs font-medium uppercase tracking-wider">Supported outputs</p>

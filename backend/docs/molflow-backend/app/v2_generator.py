@@ -21,7 +21,9 @@ class GenerationSummary:
     generated_by_z: dict[int, int]
     skipped_by_z: dict[int, int]
     feature_provenance: str
+    complete_features: bool
     exact_features: bool
+    feature_limitations: tuple[str, ...]
 
 
 def _ensure_runtime_import_path(runtime_root: Path) -> None:
@@ -57,54 +59,66 @@ def _build_batch(
     torch_module: Any,
     data_class: Any,
     batch_class: Any,
+    preprocess_structure: Any,
     device: Any,
 ) -> Any:
+    import numpy as np
+
     atom_count = molecule.atom_count
-    local_coordinates = torch_module.as_tensor(
-        molecule.local_coordinates,
-        dtype=torch_module.float32,
-        device=device,
-    ).repeat((z_value, 1))
-    centered_coordinates = torch_module.as_tensor(
-        molecule.centered_coordinates,
-        dtype=torch_module.float32,
-        device=device,
-    ).repeat((z_value, 1))
-    atom_types = torch_module.as_tensor(
-        molecule.atomic_numbers,
-        dtype=torch_module.long,
-        device=device,
-    ).repeat(z_value)
-    bb_num_vec = torch_module.full(
-        (z_value,),
-        atom_count,
-        dtype=torch_module.int32,
-        device=device,
+    all_positions = np.concatenate(
+        [molecule.coordinates.copy() for _ in range(z_value)],
+        axis=0,
     )
+    all_atom_types = np.tile(molecule.atomic_numbers, z_value)
+    bb_indices = np.repeat(np.arange(z_value, dtype=np.int64), atom_count)
+
+    # Match the lab inference kit exactly. The 20 A cell and target fields are
+    # shape-correct placeholders during sampling, while local_coords,
+    # eigenvalues, axis_flips, atom_types, and bb_num_vec are active inputs.
+    runtime_fields = preprocess_structure(
+        np.eye(3, dtype=np.float64) * 20.0,
+        all_positions,
+        all_atom_types,
+        bb_indices,
+    )
+    required_fields = {
+        "rotmats_1",
+        "trans_1",
+        "local_coords",
+        "gt_coords",
+        "bb_num_vec",
+        "atom_types",
+        "lattice_1",
+        "eigenvalues",
+        "axis_flips",
+    }
+    missing_fields = sorted(required_fields.difference(runtime_fields))
+    if missing_fields:
+        raise V2InputError(
+            "Bundled preprocess_structure omitted required fields: "
+            + ", ".join(missing_fields)
+        )
+
+    if tuple(runtime_fields["local_coords"].shape) != (atom_count * z_value, 3):
+        raise V2InputError("Bundled preprocessing returned an invalid local_coords shape.")
+    if tuple(runtime_fields["eigenvalues"].shape) != (z_value, 3):
+        raise V2InputError("Bundled preprocessing returned an invalid eigenvalues shape.")
+    if tuple(runtime_fields["axis_flips"].shape) != (z_value, 3):
+        raise V2InputError("Bundled preprocessing returned an invalid axis_flips shape.")
 
     data_fields: dict[str, Any] = {
         "num_nodes": z_value,
         "num_atoms": atom_count * z_value,
         "num_bbs": z_value,
-        "rotmats_1": torch_module.eye(
-            3, dtype=torch_module.float32, device=device
-        ).unsqueeze(0).repeat(z_value, 1, 1),
-        "trans_1": torch_module.zeros(
-            (z_value, 3), dtype=torch_module.float32, device=device
-        ),
-        "local_coords": local_coordinates,
-        "gt_coords": centered_coordinates,
-        "bb_num_vec": bb_num_vec,
-        "atom_types": atom_types,
-        "lattice_1": torch_module.eye(
-            3, dtype=torch_module.float32, device=device
-        ).unsqueeze(0),
-        "eigenvalues": _repeat_feature(
-            torch_module, molecule.eigenvalues, z_value, device
-        ),
-        "axis_flips": _repeat_feature(
-            torch_module, molecule.axis_flips, z_value, device
-        ),
+        "rotmats_1": runtime_fields["rotmats_1"].to(device),
+        "trans_1": runtime_fields["trans_1"].to(device),
+        "local_coords": runtime_fields["local_coords"].to(device),
+        "gt_coords": runtime_fields["gt_coords"].to(device),
+        "bb_num_vec": runtime_fields["bb_num_vec"].to(device),
+        "atom_types": runtime_fields["atom_types"].to(device),
+        "lattice_1": runtime_fields["lattice_1"].unsqueeze(0).to(device),
+        "eigenvalues": runtime_fields["eigenvalues"].to(device),
+        "axis_flips": runtime_fields["axis_flips"].to(device),
         "geometric_features": _repeat_feature(
             torch_module, auxiliary.geometric, z_value, device
         ),
@@ -128,13 +142,14 @@ def _load_model(
     config_path: Path,
     device_name: str,
     num_samples: int,
-) -> tuple[Any, Any, Any, Any, Any]:
+) -> tuple[Any, Any, Any, Any, Any, Any]:
     _ensure_runtime_import_path(runtime_root)
 
     import torch
     from omegaconf import OmegaConf
     from torch_geometric.data import Batch, Data
 
+    from molcrystalflow.data.dataset import preprocess_structure
     from molcrystalflow.models.molcrystalflow import FlowModule
 
     torch.set_float32_matmul_precision("high")
@@ -159,7 +174,7 @@ def _load_model(
     model._inference_cfg = cfg.inference
     model.eval()
     model.to(device)
-    return model, torch, Data, Batch, device
+    return model, torch, Data, Batch, preprocess_structure, device
 
 
 def generate_structures(
@@ -198,7 +213,7 @@ def generate_structures(
             f"pipeline reports provenance={auxiliary.provenance!r}."
         )
 
-    model, torch, data_class, batch_class, device = _load_model(
+    model, torch, data_class, batch_class, preprocess_structure, device = _load_model(
         runtime_root=runtime_root,
         checkpoint_path=checkpoint_path,
         config_path=config_path,
@@ -227,6 +242,7 @@ def generate_structures(
             torch_module=torch,
             data_class=data_class,
             batch_class=batch_class,
+            preprocess_structure=preprocess_structure,
             device=device,
         )
         model._inference_cfg.num_samples = num_samples
@@ -289,5 +305,7 @@ def generate_structures(
         generated_by_z=generated_by_z,
         skipped_by_z=skipped_by_z,
         feature_provenance=auxiliary.provenance,
+        complete_features=auxiliary.complete,
         exact_features=auxiliary.exact,
+        feature_limitations=auxiliary.limitations,
     )

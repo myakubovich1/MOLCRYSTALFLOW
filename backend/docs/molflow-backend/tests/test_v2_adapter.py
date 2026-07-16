@@ -1,10 +1,22 @@
+from importlib.util import find_spec
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
 from app.filtering import parse_candidate
-from app.v2_features import V2InputError, serialize_candidate
+from app.v2_features import (
+    V2InputError,
+    build_auxiliary_features,
+    prepare_molecule,
+    serialize_candidate,
+)
+from app.v2_generator import _build_batch
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_ROOT = BACKEND_ROOT / "runtime" / "ccdc-v2"
 
 
 class V2AdapterTests(unittest.TestCase):
@@ -63,6 +75,49 @@ class V2AdapterTests(unittest.TestCase):
         self.assertIn("--num-timesteps", command)
         self.assertIn("--gpu-lock", command)
         self.assertNotIn("csp_pipeline.py", command)
+
+    @unittest.skipUnless(
+        find_spec("torch") is not None and find_spec("torch_geometric") is not None,
+        "MolCrystalFlow runtime dependencies are not installed",
+    )
+    def test_batch_uses_bundled_preprocess_structure_contract(self):
+        import numpy as np
+        import torch
+        from torch_geometric.data import Batch, Data
+
+        runtime_text = str(RUNTIME_ROOT)
+        if runtime_text not in sys.path:
+            sys.path.insert(0, runtime_text)
+        from molcrystalflow.data.dataset import preprocess_structure
+
+        molecule = prepare_molecule(BACKEND_ROOT / "examples" / "cytosine.xyz")
+        auxiliary = build_auxiliary_features(molecule, mode="inference_kit")
+        batch = _build_batch(
+            molecule=molecule,
+            auxiliary=auxiliary,
+            z_value=2,
+            torch_module=torch,
+            data_class=Data,
+            batch_class=Batch,
+            preprocess_structure=preprocess_structure,
+            device=torch.device("cpu"),
+        )
+
+        positions = np.concatenate([molecule.coordinates, molecule.coordinates])
+        atom_types = np.tile(molecule.atomic_numbers, 2)
+        bb_indices = np.repeat(np.arange(2), molecule.atom_count)
+        expected = preprocess_structure(
+            np.eye(3) * 20.0,
+            positions,
+            atom_types,
+            bb_indices,
+        )
+
+        self.assertTrue(torch.equal(batch.local_coords, expected["local_coords"]))
+        self.assertTrue(torch.equal(batch.eigenvalues, expected["eigenvalues"]))
+        self.assertTrue(torch.equal(batch.axis_flips, expected["axis_flips"]))
+        self.assertEqual(tuple(batch.geometric_features.shape), (2, 7))
+        self.assertEqual(tuple(batch.basic_features.shape), (2, 2))
 
 
 if __name__ == "__main__":

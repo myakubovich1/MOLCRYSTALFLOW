@@ -87,10 +87,14 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
           typeof capabilities?.rigidBodySteps === "number"
             ? capabilities.rigidBodySteps
             : 10;
+        const task =
+          typeof capabilities?.potentialTask === "string"
+            ? capabilities.potentialTask.toUpperCase()
+            : null;
         setRankingAvailable(available);
         setRankingLabel(
           available
-            ? `${model} active after ${steps} rigid-body optimization steps. Candidates will be ranked by energy without a cutoff.`
+            ? `${model}${task ? ` (${task})` : ""} active after ${steps} rigid-body optimization steps. Candidates will be ranked by energy without a cutoff.`
             : typeof capabilities?.energyRankingDetail === "string"
               ? capabilities.energyRankingDetail
               : typeof capabilities?.potentialDetail === "string"

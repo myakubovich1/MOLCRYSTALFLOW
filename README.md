@@ -9,8 +9,8 @@ The current app supports the lab desktop backend:
 - molecular input is normalized into a shared submission contract before it reaches the API layer
 - job submission is proxied through Next.js API routes so backend tokens stay server-side
 - generated artifacts are loaded from the backend and previewed in the browser
-- geometry/clash filtering is reported from backend candidate metadata
-- UMA-s-1p2 energy ranking is displayed when the backend reports it is available
+- pre- and post-optimization geometry/clash screening is reported from backend candidate metadata
+- UMA-s-1p2/OMC energy ranking is displayed when the backend reports it is available
 
 ## Stack
 
@@ -65,7 +65,7 @@ that every optimized periodic contact is clash-free. Run
 - `app/api/jobs/*` and `app/api/health/route.ts` proxy the lab backend
 - `components/` reusable UI and workflow components
 - `lib/` typed helpers, input normalization, `.xyz` parsing/serialization, backend response normalization, and viewer helpers
-- `data/demo-result.json` static mock result template
+- `data/cytosine-example.json` validated cytosine example and provenance
 - `public/demo/` downloadable demo artifacts
 - `backend/docs/molflow-backend/` server-copyable FastAPI backend bundle
 
@@ -83,9 +83,13 @@ cd ~/molflow-backend
 bash start.sh
 ```
 
-The backend is configured for UMA-s-1p2 ranking after exactly 10 rigid-body
-optimization steps through the lab `csp-pipeline` implementation. The frontend
-does not expose backend tokens to the browser.
+The packaged backend is configured for UMA-s-1p2 molecular-crystal ranking with
+the OMC task after exactly 10 rigid-body optimization steps through the lab
+`csp-pipeline` implementation. Final optimized coordinates are screened again
+before acceptance. CCDC-v2 inputs use the lab-supplied seven geometric and two
+basic descriptor implementation rather than zero-filled placeholders; the
+supplied planarity formula remains an explicitly documented approximation. The
+frontend does not expose backend tokens to the browser.
 
 ## Vercel Deployment
 

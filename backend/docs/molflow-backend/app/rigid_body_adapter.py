@@ -28,6 +28,13 @@ def _load_rigid_constraint_function() -> Any:
     return add_rigid_body_constraints
 
 
+def validate_molflow_rigid_body_runtime() -> None:
+    """Fail early when the lab rigid-constraint implementation is unavailable."""
+    add_rigid_body_constraints = _load_rigid_constraint_function()
+    if not callable(add_rigid_body_constraints):
+        raise TypeError("csp-pipeline add_rigid_body_constraints is not callable.")
+
+
 def optimize_rigid_body(
     atoms: Any,
     calculator: Any,

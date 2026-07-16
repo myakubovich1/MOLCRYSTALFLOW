@@ -9,7 +9,7 @@ model:
     c_bb_input: ${model.bb_embedder.c_node_dim}
     c_bb_emb: 128
     c_timestep_emb: 256
-    node_extra_dim: 13  # 1 (bb_num_vec) + 7 (geometric) + 5 (basic)
+    node_extra_dim: 13  # 1 (bb_num) + 3 (PCA) + 7 (geometric) + 2 (basic)
   edge_features:
     c_s: ${model.node_embed_size}
     c_p: ${model.edge_embed_size}

@@ -18,9 +18,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-samples", required=True, type=int)
     parser.add_argument("--num-timesteps", required=True, type=int)
     parser.add_argument("--device", required=True)
-    parser.add_argument("--feature-mode", required=True, choices=["neutral", "factory"])
+    parser.add_argument(
+        "--feature-mode",
+        required=True,
+        choices=["inference_kit", "neutral", "factory"],
+    )
     parser.add_argument("--feature-factory", default="")
     parser.add_argument("--require-exact-features", action="store_true")
+    parser.add_argument("--allow-neutral-features", action="store_true")
     parser.add_argument("--model-name", required=True)
     parser.add_argument("--seed", required=True, type=int)
     parser.add_argument("--gpu-lock", required=True, type=Path)
@@ -29,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.feature_mode == "neutral" and not args.allow_neutral_features:
+        raise SystemExit(
+            "Neutral zero-filled features are disabled. Use inference_kit for normal "
+            "generation, or pass --allow-neutral-features only for rollback diagnostics."
+        )
     args.gpu_lock.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Waiting for model execution lock: {args.gpu_lock}", flush=True)
@@ -57,7 +67,10 @@ def main() -> None:
     print(f"Generated candidates by Z: {summary.generated_by_z}", flush=True)
     print(f"Skipped invalid candidates by Z: {summary.skipped_by_z}", flush=True)
     print(f"Feature provenance: {summary.feature_provenance}", flush=True)
+    print(f"Complete checkpoint features: {summary.complete_features}", flush=True)
     print(f"Exact training features: {summary.exact_features}", flush=True)
+    for limitation in summary.feature_limitations:
+        print(f"Feature limitation: {limitation}", flush=True)
 
 
 if __name__ == "__main__":

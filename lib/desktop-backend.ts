@@ -27,6 +27,7 @@ export interface DesktopJobSnapshot {
   error?: string;
   createdAt?: string;
   updatedAt?: string;
+  generationSeed?: number;
 }
 
 function isRecord(value: unknown): value is RecordValue {
@@ -309,11 +310,17 @@ function normalizeFilterSummary(value: unknown): FilterSummary | undefined {
     energyRejectedCount: read(["energyRejectedCount", "energy_rejected_count"]),
     acceptedCount: read(["acceptedCount", "accepted_count"]),
     energyRankedCount: pickNumber(value, ["energyRankedCount", "energy_ranked_count"]),
+    preOptimizationGeometryPassedCount: pickNumber(value, ["preOptimizationGeometryPassedCount", "pre_optimization_geometry_passed_count"]),
+    preOptimizationGeometryRejectedCount: pickNumber(value, ["preOptimizationGeometryRejectedCount", "pre_optimization_geometry_rejected_count"]),
+    postOptimizationGeometryEvaluatedCount: pickNumber(value, ["postOptimizationGeometryEvaluatedCount", "post_optimization_geometry_evaluated_count"]),
+    postOptimizationGeometryPassedCount: pickNumber(value, ["postOptimizationGeometryPassedCount", "post_optimization_geometry_passed_count"]),
+    postOptimizationGeometryRejectedCount: pickNumber(value, ["postOptimizationGeometryRejectedCount", "post_optimization_geometry_rejected_count"]),
     energyRankingAvailable: pickBoolean(value, ["energyRankingAvailable", "energy_ranking_available"]),
     energyRankingUnavailableReason: pickString(value, ["energyRankingUnavailableReason", "energy_ranking_unavailable_reason"]),
     rankingMode: pickString(value, ["rankingMode", "ranking_mode"]),
     potentialProvider: pickString(value, ["potentialProvider", "potential_provider"]),
     potentialModel: pickString(value, ["potentialModel", "potential_model"]),
+    potentialTask: pickString(value, ["potentialTask", "potential_task"]),
     rigidBodySteps: pickNumber(value, ["rigidBodySteps", "rigid_body_steps"]),
   };
 }
@@ -365,6 +372,7 @@ export function normalizeDesktopJobStatus(value: unknown, expectedJobId: string)
     zValues: normalizeZValues(value, artifacts),
     artifacts,
     logTail,
+    generationSeed: pickNumber(value, ["generationSeed", "generation_seed"]),
     error: pickString(value, ["error", "detail", "message"]),
     createdAt: pickString(value, ["createdAt", "created_at", "submittedAt", "submitted_at"]),
     updatedAt: pickString(value, ["updatedAt", "updated_at", "completedAt", "completed_at"]),

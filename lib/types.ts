@@ -107,12 +107,30 @@ export interface FilterSummary {
   energyRejectedCount: number;
   acceptedCount: number;
   energyRankedCount?: number;
+  preOptimizationGeometryPassedCount?: number;
+  preOptimizationGeometryRejectedCount?: number;
+  postOptimizationGeometryEvaluatedCount?: number;
+  postOptimizationGeometryPassedCount?: number;
+  postOptimizationGeometryRejectedCount?: number;
   energyRankingAvailable?: boolean;
   energyRankingUnavailableReason?: string;
   rankingMode?: string;
   potentialProvider?: string;
   potentialModel?: string;
+  potentialTask?: string;
   rigidBodySteps?: number;
+}
+
+export interface GeometryFilterRecord {
+  geometryPassed?: boolean;
+  reasons?: string[];
+  densityGcm3?: number;
+  minimumIntermolecularDistanceAngstrom?: number;
+  minimumVdwRatio?: number;
+  minimumHeavyAtomVdwRatio?: number;
+  clashCount?: number;
+  periodicSelfImageClashCount?: number;
+  clashRate?: number;
 }
 
 export interface CandidateFilterRecord {
@@ -126,21 +144,34 @@ export interface CandidateFilterRecord {
   densityGcm3?: number;
   minimumIntermolecularDistanceAngstrom?: number;
   minimumVdwRatio?: number;
+  minimumHeavyAtomVdwRatio?: number;
   clashCount?: number;
+  periodicSelfImageClashCount?: number;
   clashRate?: number;
+  preOptimizationGeometry?: GeometryFilterRecord;
+  postOptimizationGeometry?: GeometryFilterRecord;
+  geometryStage?: string;
   rank?: number;
   energy?: number;
   energyUnits?: string;
   energyEvPerMolecule?: number;
+  energyType?: string;
   relativeEnergyEvPerMolecule?: number;
+  initialEnergyEvPerMolecule?: number;
+  initialMaxForceEvPerAngstrom?: number;
   maxForceEvPerAngstrom?: number;
+  forceKind?: string;
   potentialProvider?: string;
   potentialModel?: string;
+  potentialTask?: string;
   potentialStatus?: string;
   rankingStatus?: string;
   optimized?: boolean;
   optimizationType?: string;
   optimizationSteps?: number;
+  optimizationProtocol?: string;
+  optimizationConverged?: boolean | null;
+  scientificStatus?: string;
   scoringError?: string;
 }
 

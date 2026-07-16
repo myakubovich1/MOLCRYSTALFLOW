@@ -15,12 +15,16 @@ SHA256: cf841452a9eb9bc2300e760ef5fe072337167e8fcd87adf91408804c60b873bf
 
 `checkpoints/config.yaml` is the checkpoint's resolved training configuration.
 
-The original archive did not include the code that generated the normalized
-basic and geometric descriptors loaded by `molcrystalflow/data/dataset.py`.
-The backend therefore supports:
+The later lab CSP inference kit supplied the missing feature computation. The
+nine descriptors are raw rather than separately normalized. The backend
+supports:
 
-- `neutral`: known PCA inputs plus nine zero-valued normalized descriptors.
-- `factory`: a lab-provided Python feature function with the exact descriptors.
+- `inference_kit` (default): seven geometric and two basic descriptors from the
+  supplied inference workflow. Planarity uses the kit's documented I2/I1
+  approximation.
+- `factory`: an optional independently verified exact Python feature function.
+- `neutral`: zero-valued descriptors, blocked unless explicitly enabled for
+  rollback diagnostics.
 
-The neutral mode is an engineering compatibility fallback, not proof of
-scientific equivalence to the lab inference pipeline.
+Neutral mode is not suitable for scientific generation. It produced
+out-of-distribution inputs and compressed candidate cells during validation.

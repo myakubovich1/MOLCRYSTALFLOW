@@ -146,7 +146,7 @@ class FlowModel(nn.Module):
             bb_emb = self.bb_embedder(input_feats)
         bb_num_vec = input_feats['bb_num_vec']         # [num_bbs]
         eigenvalues = input_feats.get('eigenvalues', None)       # [num_bbs, 3]
-        geometric_features = input_feats.get('geometric_features', None)       # [num_bbs, 4]
+        geometric_features = input_feats.get('geometric_features', None)       # [num_bbs, 7]
         basic_features = input_feats.get('basic_features', None)       # [num_bbs, 2]
         chemical_features = input_feats.get('chemical_features', None)       # [num_bbs, 8]
         axis_flips = input_feats.get('axis_flips', None)       # [num_bbs, 3]

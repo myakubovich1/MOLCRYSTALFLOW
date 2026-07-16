@@ -1,4 +1,4 @@
-"""Template for the exact CCDC v2 training-feature adapter.
+"""Template for a future exact CCDC-v2 training-feature adapter.
 
 Install the completed module in the backend environment and configure:
 
@@ -18,15 +18,15 @@ def build_features(
     eigenvalues,
     axis_flips,
 ):
-    """Return the normalized descriptors used by the checkpoint.
+    """Return descriptors in the checkpoint's exact column order.
 
     The total node-extra dimension must be:
 
       bb_num_vec (1)
       + eigenvalues (3)
-      + geometric_features
-      + basic_features
-      + optional chemical_features
+      + geometric_features (7)
+      + basic_features (2)
+      + chemical_features (0)
       = 13
     """
     raise NotImplementedError(
@@ -38,6 +38,7 @@ def build_features(
     #     "geometric_features": geometric_vector,
     #     "basic_features": basic_vector,
     #     "chemical_features": None,
-    #     "provenance": "lab-ccdc-stage1-normalized-original",
+    #     "provenance": "independently-verified-exact-implementation",
+    #     "complete": True,
     #     "exact": True,
     # }

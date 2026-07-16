@@ -7,8 +7,8 @@ from typing import Any, Callable
 
 EXPECTED_NODE_EXTRA_DIM = 13
 KNOWN_NODE_EXTRA_DIM = 4  # bb_num_vec (1) + PCA eigenvalues (3)
-NEUTRAL_GEOMETRIC_DIM = 4
-NEUTRAL_BASIC_DIM = 5
+EXPECTED_GEOMETRIC_DIM = 7
+EXPECTED_BASIC_DIM = 2
 
 
 class V2InputError(ValueError):
@@ -42,7 +42,9 @@ class AuxiliaryFeatures:
     basic: Any
     chemical: Any | None
     provenance: str
+    complete: bool
     exact: bool
+    limitations: tuple[str, ...]
 
     @property
     def supplied_dim(self) -> int:
@@ -202,6 +204,17 @@ def _as_feature_vector(value: Any, label: str) -> Any:
     return vector
 
 
+def _as_limitations(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,) if value.strip() else ()
+    try:
+        return tuple(str(item) for item in value if str(item).strip())
+    except TypeError as error:
+        raise V2FeatureError("Feature limitations must be a string or iterable.") from error
+
+
 def _load_factory(factory_path: str) -> Callable[..., Any]:
     if ":" not in factory_path:
         raise V2FeatureError(
@@ -230,11 +243,42 @@ def build_auxiliary_features(
 
     if mode == "neutral":
         features = AuxiliaryFeatures(
-            geometric=np.zeros(NEUTRAL_GEOMETRIC_DIM, dtype=np.float32),
-            basic=np.zeros(NEUTRAL_BASIC_DIM, dtype=np.float32),
+            geometric=np.zeros(EXPECTED_GEOMETRIC_DIM, dtype=np.float32),
+            basic=np.zeros(EXPECTED_BASIC_DIM, dtype=np.float32),
             chemical=None,
             provenance="neutral-zero-fallback",
+            complete=False,
             exact=False,
+            limitations=(
+                "Nine required CCDC-v2 molecular descriptors were replaced with zeros.",
+            ),
+        )
+    elif mode == "inference_kit":
+        from .v2_auxiliary_features import build_inference_kit_features
+
+        raw_features = build_inference_kit_features(
+            symbols=molecule.symbols,
+            atomic_numbers=molecule.atomic_numbers.copy(),
+            coordinates=molecule.coordinates.copy(),
+            centered_coordinates=molecule.centered_coordinates.copy(),
+            local_coordinates=molecule.local_coordinates.copy(),
+            eigenvalues=molecule.eigenvalues.copy(),
+            axis_flips=molecule.axis_flips.copy(),
+        )
+        features = AuxiliaryFeatures(
+            geometric=_as_feature_vector(
+                raw_features["geometric_features"],
+                "geometric_features",
+            ),
+            basic=_as_feature_vector(
+                raw_features["basic_features"],
+                "basic_features",
+            ),
+            chemical=None,
+            provenance=str(raw_features["provenance"]),
+            complete=bool(raw_features["complete"]),
+            exact=bool(raw_features["exact"]),
+            limitations=_as_limitations(raw_features.get("limitations")),
         )
     elif mode == "factory":
         factory = _load_factory(factory_path)
@@ -267,7 +311,9 @@ def build_auxiliary_features(
                 )
             ),
             provenance=str(raw_features.get("provenance", factory_path)),
-            exact=bool(raw_features.get("exact", True)),
+            complete=bool(raw_features.get("complete", True)),
+            exact=bool(raw_features.get("exact", False)),
+            limitations=_as_limitations(raw_features.get("limitations")),
         )
     else:
         raise V2FeatureError(f"Unsupported v2 feature mode: {mode!r}")
@@ -279,6 +325,22 @@ def build_auxiliary_features(
             f"{actual_dim} node-extra dimensions; checkpoint expects "
             f"{EXPECTED_NODE_EXTRA_DIM}."
         )
+    if features.geometric.shape[0] != EXPECTED_GEOMETRIC_DIM:
+        raise V2FeatureError(
+            "The CCDC-v2 checkpoint expects seven geometric features; "
+            f"received {features.geometric.shape[0]}."
+        )
+    if features.basic.shape[0] != EXPECTED_BASIC_DIM:
+        raise V2FeatureError(
+            "The CCDC-v2 checkpoint expects two basic features; "
+            f"received {features.basic.shape[0]}."
+        )
+    if features.chemical is not None and features.chemical.shape[0] != 0:
+        raise V2FeatureError(
+            "The CCDC-v2 epoch-436 checkpoint does not accept chemical_features."
+        )
+    if features.exact and not features.complete:
+        raise V2FeatureError("An exact feature payload must also be complete.")
     return features
 
 

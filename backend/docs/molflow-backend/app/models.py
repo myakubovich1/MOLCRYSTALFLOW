@@ -46,4 +46,5 @@ class JobStatusResponse(BaseModel):
     generatorBackend: Optional[str] = None
     modelVersion: Optional[str] = None
     featureMode: Optional[str] = None
+    generationSeed: Optional[int] = None
     error: Optional[str] = None

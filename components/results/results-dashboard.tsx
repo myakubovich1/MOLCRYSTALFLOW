@@ -105,14 +105,22 @@ function FilteringSummary({ job }: { job: JobResult }) {
   const summary = job.filterSummary;
   if (!summary) return null;
 
-  const metrics = [
+  const hasStagedGeometry =
+    typeof summary.preOptimizationGeometryRejectedCount === "number" ||
+    typeof summary.postOptimizationGeometryRejectedCount === "number";
+  const metrics: Array<readonly [string, number]> = [
     ["Generated", summary.generatedCount],
-    ["Geometry rejected", summary.geometryRejectedCount],
+    ...(hasStagedGeometry
+      ? [
+          ["Pre-filter rejected", summary.preOptimizationGeometryRejectedCount ?? 0] as const,
+          ["Post-opt rejected", summary.postOptimizationGeometryRejectedCount ?? 0] as const,
+        ]
+      : [["Geometry rejected", summary.geometryRejectedCount] as const]),
     ["Clash rejected", summary.clashRejectedCount],
     ["Potential failed", summary.potentialFailedCount],
     ["Energy ranked", summary.energyRankedCount ?? 0],
     ["Accepted", summary.acceptedCount],
-  ] as const;
+  ];
 
   return (
     <div className="theme-subpanel-soft rounded-xl p-4">
@@ -136,7 +144,7 @@ function FilteringSummary({ job }: { job: JobResult }) {
             <p className="theme-text-muted text-[11px]">Ranking</p>
             <p className="theme-text-primary mt-0.5 text-sm font-medium">
               {summary.energyRankingAvailable
-                ? `${summary.potentialModel ?? "UMA-s-1p2"}, ${summary.rigidBodySteps ?? 10} rigid-body steps`
+                ? `${summary.potentialModel ?? "UMA-s-1p2"}${summary.potentialTask ? ` (${summary.potentialTask.toUpperCase()})` : ""}, ${summary.rigidBodySteps ?? 10} rigid-body steps`
                 : summary.energyRankingUnavailableReason ?? "Unavailable"}
             </p>
           </div>

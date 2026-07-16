@@ -1,15 +1,26 @@
 from collections import Counter
 from dataclasses import dataclass
 import json
-from math import acos, isfinite, pi, sqrt
+from math import acos, ceil, floor, isfinite, pi, sqrt
 from pathlib import Path
 import re
 import shutil
 from typing import Any
 
-from .config import POTENTIAL_MODEL, POTENTIAL_PROVIDER, RIGID_BODY_STEPS, UMA_MODEL
+from .config import (
+    GENERATOR_BACKEND,
+    POTENTIAL_MODEL,
+    POTENTIAL_PROVIDER,
+    RIGID_BODY_STEPS,
+    UMA_MODEL,
+    UMA_TASK_NAME,
+    V2_FEATURE_MODE,
+    V2_MODEL_NAME,
+    V2_REQUIRE_EXACT_FEATURES,
+)
 from .potential import PotentialEvaluator
 from .utils import ensure_dir, write_json
+from .v2_auxiliary_features import FEATURE_LIMITATIONS as V2_INFERENCE_KIT_LIMITATIONS
 
 
 VDW_RADII = {
@@ -119,12 +130,65 @@ def _matrix_vector(matrix: list[list[float]], vector: tuple[float, float, float]
     )
 
 
-def _minimum_image_distance(
+def _cross(
+    left: tuple[float, float, float],
+    right: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    return (
+        left[1] * right[2] - left[2] * right[1],
+        left[2] * right[0] - left[0] * right[2],
+        left[0] * right[1] - left[1] * right[0],
+    )
+
+
+def _norm(vector: tuple[float, float, float]) -> float:
+    return sqrt(sum(component * component for component in vector))
+
+
+def _cell_heights(
+    cell: list[tuple[float, float, float]],
+) -> tuple[float, float, float]:
+    volume = abs(_determinant(cell))
+    face_areas = (
+        _norm(_cross(cell[1], cell[2])),
+        _norm(_cross(cell[0], cell[2])),
+        _norm(_cross(cell[0], cell[1])),
+    )
+    if volume < 1e-10 or any(area < 1e-10 for area in face_areas):
+        raise ValueError("Cell matrix is singular.")
+    return tuple(volume / area for area in face_areas)
+
+
+def _periodic_distance_for_shift(
+    fractional: tuple[float, float, float],
+    shift: tuple[int, int, int],
+    cell: list[tuple[float, float, float]],
+) -> float:
+    wrapped = tuple(fractional[index] - shift[index] for index in range(3))
+    cartesian = (
+        wrapped[0] * cell[0][0] + wrapped[1] * cell[1][0] + wrapped[2] * cell[2][0],
+        wrapped[0] * cell[0][1] + wrapped[1] * cell[1][1] + wrapped[2] * cell[2][1],
+        wrapped[0] * cell[0][2] + wrapped[1] * cell[1][2] + wrapped[2] * cell[2][2],
+    )
+    return _norm(cartesian)
+
+
+def _minimum_periodic_distance(
     left: tuple[float, float, float],
     right: tuple[float, float, float],
     cell: list[tuple[float, float, float]],
     inverse_cell_transpose: list[list[float]],
-) -> float:
+    *,
+    include_same_cell: bool,
+) -> tuple[float, tuple[int, int, int]]:
+    """Return the exact nearest periodic distance for a three-dimensional cell.
+
+    The initial local search supplies an upper bound. Cell-face heights then
+    bound every lattice translation that could improve that distance, including
+    highly skewed cells. For atoms from the same molecular body, the zero shift
+    is excluded so covalent contacts are ignored while contacts with periodic
+    replicas remain visible.
+    """
     displacement = (
         left[0] - right[0],
         left[1] - right[1],
@@ -133,28 +197,80 @@ def _minimum_image_distance(
     fractional = _matrix_vector(inverse_cell_transpose, displacement)
     nearest = tuple(round(value) for value in fractional)
     minimum_distance = float("inf")
+    minimum_shift: tuple[int, int, int] | None = None
 
-    # Component-wise wrapping alone is not guaranteed to find the nearest image
-    # in a skewed triclinic cell. Search the neighboring images around it.
     for a_shift in (-1, 0, 1):
         for b_shift in (-1, 0, 1):
             for c_shift in (-1, 0, 1):
-                wrapped = (
-                    fractional[0] - nearest[0] - a_shift,
-                    fractional[1] - nearest[1] - b_shift,
-                    fractional[2] - nearest[2] - c_shift,
+                shift = (
+                    nearest[0] + a_shift,
+                    nearest[1] + b_shift,
+                    nearest[2] + c_shift,
                 )
-                cartesian = (
-                    wrapped[0] * cell[0][0] + wrapped[1] * cell[1][0] + wrapped[2] * cell[2][0],
-                    wrapped[0] * cell[0][1] + wrapped[1] * cell[1][1] + wrapped[2] * cell[2][1],
-                    wrapped[0] * cell[0][2] + wrapped[1] * cell[1][2] + wrapped[2] * cell[2][2],
-                )
-                distance = sqrt(
-                    cartesian[0] ** 2 + cartesian[1] ** 2 + cartesian[2] ** 2
-                )
-                minimum_distance = min(minimum_distance, distance)
+                if not include_same_cell and shift == (0, 0, 0):
+                    continue
+                distance = _periodic_distance_for_shift(fractional, shift, cell)
+                if distance < minimum_distance:
+                    minimum_distance = distance
+                    minimum_shift = shift
 
-    return minimum_distance
+    if minimum_shift is None or not isfinite(minimum_distance):
+        raise ValueError("No valid periodic image was available for contact analysis.")
+
+    # Improve the initial upper bound before constructing the exhaustive search
+    # box. This matters for non-reduced cells where a short lattice vector can
+    # require coefficients outside the first [-1, 1] neighborhood.
+    for _ in range(100):
+        improved = False
+        current_shift = minimum_shift
+        for a_offset in (-1, 0, 1):
+            for b_offset in (-1, 0, 1):
+                for c_offset in (-1, 0, 1):
+                    shift = (
+                        current_shift[0] + a_offset,
+                        current_shift[1] + b_offset,
+                        current_shift[2] + c_offset,
+                    )
+                    if not include_same_cell and shift == (0, 0, 0):
+                        continue
+                    distance = _periodic_distance_for_shift(fractional, shift, cell)
+                    if distance + 1e-12 < minimum_distance:
+                        minimum_distance = distance
+                        minimum_shift = shift
+                        improved = True
+        if not improved:
+            break
+
+    heights = _cell_heights(cell)
+    ranges: list[range] = []
+    for component, height in zip(fractional, heights):
+        span = minimum_distance / height
+        ranges.append(
+            range(
+                floor(component - span) - 1,
+                ceil(component + span) + 2,
+            )
+        )
+
+    translation_count = len(ranges[0]) * len(ranges[1]) * len(ranges[2])
+    if translation_count > 250_000:
+        raise ValueError(
+            "Cell is too skewed for bounded periodic contact analysis "
+            f"({translation_count} lattice translations required)."
+        )
+
+    for a_shift in ranges[0]:
+        for b_shift in ranges[1]:
+            for c_shift in ranges[2]:
+                shift = (a_shift, b_shift, c_shift)
+                if not include_same_cell and shift == (0, 0, 0):
+                    continue
+                distance = _periodic_distance_for_shift(fractional, shift, cell)
+                if distance < minimum_distance:
+                    minimum_distance = distance
+                    minimum_shift = shift
+
+    return minimum_distance, minimum_shift
 
 
 def _property_offsets(comment: str) -> dict[str, tuple[int, int]]:
@@ -302,6 +418,28 @@ def _serialize_candidate(
     return "\n".join([str(len(candidate.atoms)), base_comment, *rows]) + "\n"
 
 
+def _candidate_with_geometry(
+    candidate: CandidateStructure,
+    positions: list[tuple[float, float, float]],
+    cell: list[tuple[float, float, float]],
+) -> CandidateStructure:
+    if len(positions) != len(candidate.atoms):
+        raise ValueError(
+            "Optimized position count does not match the generated candidate atom count."
+        )
+    return CandidateStructure(
+        z_value=candidate.z_value,
+        source_index=candidate.source_index,
+        comment=candidate.comment,
+        atoms=[
+            AtomRecord(atom.symbol, position, atom.molecule_index)
+            for atom, position in zip(candidate.atoms, positions)
+        ],
+        cell=cell,
+        raw_text=candidate.raw_text,
+    )
+
+
 def analyze_geometry(
     candidate: CandidateStructure,
     input_atom_count: int,
@@ -343,36 +481,68 @@ def analyze_geometry(
 
     minimum_distance: float | None = None
     minimum_ratio: float | None = None
+    minimum_heavy_atom_ratio: float | None = None
+    minimum_contact: dict[str, Any] | None = None
     intermolecular_pairs = 0
+    periodic_self_image_pairs = 0
     clash_count = 0
+    periodic_self_image_clash_count = 0
     close_contact_count = 0
     threshold = float(options.get("clashThresholdRatio", 0.65))
 
     if inverse_cell_transpose is not None:
-        for left_index, left in enumerate(candidate.atoms):
-            for right in candidate.atoms[left_index + 1 :]:
-                if left.molecule_index == right.molecule_index:
-                    continue
-                distance = _minimum_image_distance(
-                    left.position,
-                    right.position,
-                    candidate.cell,
-                    inverse_cell_transpose,
-                )
-                radius_sum = VDW_RADII.get(left.symbol, 1.8) + VDW_RADII.get(right.symbol, 1.8)
-                ratio = distance / radius_sum
-                intermolecular_pairs += 1
-                minimum_distance = distance if minimum_distance is None else min(minimum_distance, distance)
-                minimum_ratio = ratio if minimum_ratio is None else min(minimum_ratio, ratio)
-                if ratio < threshold:
-                    clash_count += 1
-                if ratio < 0.8:
-                    close_contact_count += 1
+        try:
+            for left_index, left in enumerate(candidate.atoms):
+                for right_index in range(left_index, len(candidate.atoms)):
+                    right = candidate.atoms[right_index]
+                    same_molecular_body = left.molecule_index == right.molecule_index
+                    distance, image_shift = _minimum_periodic_distance(
+                        left.position,
+                        right.position,
+                        candidate.cell,
+                        inverse_cell_transpose,
+                        include_same_cell=not same_molecular_body,
+                    )
+                    radius_sum = VDW_RADII.get(left.symbol, 1.8) + VDW_RADII.get(right.symbol, 1.8)
+                    ratio = distance / radius_sum
+                    intermolecular_pairs += 1
+                    if same_molecular_body:
+                        periodic_self_image_pairs += 1
+                    if minimum_ratio is None or ratio < minimum_ratio:
+                        minimum_distance = distance
+                        minimum_ratio = ratio
+                        minimum_contact = {
+                            "leftAtomIndex": left_index,
+                            "rightAtomIndex": right_index,
+                            "leftElement": left.symbol,
+                            "rightElement": right.symbol,
+                            "leftMoleculeIndex": left.molecule_index,
+                            "rightMoleculeIndex": right.molecule_index,
+                            "imageShift": list(image_shift),
+                            "distanceAngstrom": distance,
+                            "vdwRatio": ratio,
+                            "periodicSelfImage": same_molecular_body,
+                        }
+                    if left.symbol != "H" and right.symbol != "H":
+                        minimum_heavy_atom_ratio = (
+                            ratio
+                            if minimum_heavy_atom_ratio is None
+                            else min(minimum_heavy_atom_ratio, ratio)
+                        )
+                    if ratio < threshold:
+                        clash_count += 1
+                        if same_molecular_body:
+                            periodic_self_image_clash_count += 1
+                    if ratio < 0.8:
+                        close_contact_count += 1
+        except ValueError as error:
+            reasons.append(f"Periodic contact analysis failed: {error}")
 
     clash_rate = clash_count / intermolecular_pairs if intermolecular_pairs else 0.0
     if clash_count > int(options.get("maxClashCount", 0)):
         reasons.append(
-            f"Found {clash_count} intermolecular clashes below {threshold:.3f} times the van der Waals radii sum."
+            f"Found {clash_count} periodic intermolecular clashes below "
+            f"{threshold:.3f} times the van der Waals radii sum."
         )
 
     volume = cell_parameters["volume"] if cell_parameters else None
@@ -394,10 +564,16 @@ def analyze_geometry(
         "densityGcm3": density,
         "minimumIntermolecularDistanceAngstrom": minimum_distance,
         "minimumVdwRatio": minimum_ratio,
+        "minimumHeavyAtomVdwRatio": minimum_heavy_atom_ratio,
+        "minimumContact": minimum_contact,
         "intermolecularPairCount": intermolecular_pairs,
+        "periodicSelfImagePairCount": periodic_self_image_pairs,
         "clashCount": clash_count,
+        "periodicSelfImageClashCount": periodic_self_image_clash_count,
         "closeContactCount": close_contact_count,
         "clashRate": clash_rate,
+        "clashThresholdRatio": threshold,
+        "vdwRadiusSet": "molflow-v1",
     }
 
 
@@ -411,11 +587,13 @@ def process_generated_outputs(
     input_atom_count: int,
     z_values: list[int],
     options: dict[str, Any],
+    generation_seed: int | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     ensure_dir(artifacts_dir)
     candidates: list[dict[str, Any]] = []
     candidate_objects: dict[str, CandidateStructure] = {}
     missing_sources: list[str] = []
+    geometry_enabled = bool(options.get("geometryEnabled", True))
 
     raw_combined = generated_dir / "pred_combined.xyz"
     if raw_combined.exists():
@@ -437,16 +615,21 @@ def process_generated_outputs(
                 "status": "pending",
                 "accepted": False,
                 "reasons": [],
+                "geometryEnabled": geometry_enabled,
             }
             try:
                 candidate = parse_candidate(block, z_value, source_index)
                 candidate_objects[candidate_id] = candidate
-                if options.get("geometryEnabled", True):
-                    entry.update(analyze_geometry(candidate, input_atom_count, options))
+                if geometry_enabled:
+                    pre_geometry = analyze_geometry(candidate, input_atom_count, options)
+                    entry["preOptimizationGeometry"] = pre_geometry
+                    entry["geometryStage"] = "pre-optimization"
+                    entry.update(pre_geometry)
                 else:
                     entry.update(
                         {
                             "geometryPassed": True,
+                            "geometryStage": "not-enforced",
                             "atomCount": len(candidate.atoms),
                             "moleculeCount": len(set(atom.molecule_index for atom in candidate.atoms)),
                         }
@@ -470,6 +653,7 @@ def process_generated_outputs(
     uma_ranking_enabled = POTENTIAL_PROVIDER == "uma"
     scoring_enabled = energy_filter_requested or uma_ranking_enabled
     potential_model = UMA_MODEL if uma_ranking_enabled else POTENTIAL_MODEL
+    potential_task = UMA_TASK_NAME if uma_ranking_enabled else None
     evaluator: PotentialEvaluator | None = None
     evaluator_error: str | None = None
     if scoring_enabled:
@@ -483,15 +667,17 @@ def process_generated_outputs(
     scored_by_z: dict[int, list[dict[str, Any]]] = {}
     ranked_entries: list[dict[str, Any]] = []
     relaxed_structures: dict[str, tuple[list[tuple[float, float, float]], list[tuple[float, float, float]]]] = {}
+    optimized_rejected_structures: list[str] = []
 
     for entry in candidates:
         if not entry.get("geometryPassed"):
-            entry["status"] = "geometry_rejected"
+            entry["status"] = "pre_geometry_rejected"
             continue
 
         if not scoring_enabled:
             entry["status"] = "accepted"
             entry["accepted"] = True
+            entry["scientificStatus"] = "geometry-screened candidate"
             continue
 
         candidate = candidate_objects[entry["id"]]
@@ -499,6 +685,7 @@ def process_generated_outputs(
             {
                 "potentialProvider": POTENTIAL_PROVIDER if POTENTIAL_PROVIDER != "none" else None,
                 "potentialModel": potential_model if POTENTIAL_PROVIDER != "none" else None,
+                "potentialTask": potential_task,
                 "optimizationType": "rigid-body" if uma_ranking_enabled else None,
                 "optimizationSteps": RIGID_BODY_STEPS if uma_ranking_enabled else 0,
                 "optimized": False,
@@ -515,12 +702,8 @@ def process_generated_outputs(
                     "scoringError": evaluator_error,
                 }
             )
-            if uma_ranking_enabled:
-                entry["status"] = "accepted"
-                entry["accepted"] = True
-            else:
-                entry["status"] = "potential_failed"
-                entry["reasons"].append(f"Potential evaluation failed: {evaluator_error}")
+            entry["status"] = "potential_failed"
+            entry["reasons"].append(f"Potential evaluation failed: {evaluator_error}")
             continue
 
         potential_attempted += 1
@@ -547,19 +730,84 @@ def process_generated_outputs(
                     "energyEvPerMolecule": energy_per_molecule,
                     "energy": energy_per_molecule,
                     "energyUnits": "eV/molecule",
+                    "energyType": "UMA total potential energy per molecule" if uma_ranking_enabled else "potential energy per molecule",
+                    "initialEnergyEv": result.initial_energy_ev,
+                    "initialEnergyEvPerMolecule": (
+                        result.initial_energy_ev / candidate.z_value
+                        if result.initial_energy_ev is not None
+                        else None
+                    ),
+                    "initialMaxForceEvPerAngstrom": result.initial_max_force_ev_per_angstrom,
                     "maxForceEvPerAngstrom": result.max_force_ev_per_angstrom,
+                    "forceKind": result.force_kind,
                     "optimized": result.optimized,
                     "optimizationType": result.optimization_type,
                     "optimizationSteps": result.optimization_steps,
+                    "optimizationProtocol": result.optimization_protocol,
+                    "optimizationConverged": result.optimization_converged,
                     "potentialProvider": result.potential_provider,
                     "potentialModel": result.potential_model,
+                    "potentialTask": result.potential_task,
+                    "potentialPackageVersion": result.potential_package_version,
+                    "aseVersion": result.ase_version,
                 }
             )
             relaxed_structures[entry["id"]] = (result.positions, result.cell)
 
+            if result.optimized:
+                optimized_candidate = _candidate_with_geometry(
+                    candidate,
+                    result.positions,
+                    result.cell,
+                )
+                post_geometry = analyze_geometry(
+                    optimized_candidate,
+                    input_atom_count,
+                    options,
+                )
+                entry["postOptimizationGeometry"] = post_geometry
+                if geometry_enabled:
+                    entry["geometryStage"] = "post-optimization"
+                    entry.update(post_geometry)
+                    if not post_geometry["geometryPassed"]:
+                        entry["status"] = "post_geometry_rejected"
+                        entry["accepted"] = False
+                        optimized_rejected_structures.append(
+                            _serialize_candidate(
+                                candidate,
+                                positions=result.positions,
+                                cell=result.cell,
+                                metadata={
+                                    "id": entry["id"],
+                                    "status": entry["status"],
+                                    "minimum_vdw_ratio": post_geometry.get("minimumVdwRatio"),
+                                    "clash_count": post_geometry.get("clashCount"),
+                                    "potential_provider": result.potential_provider,
+                                    "potential_model": result.potential_model,
+                                    "potential_task": result.potential_task,
+                                    "optimization_steps": result.optimization_steps,
+                                },
+                            )
+                        )
+                        continue
+                else:
+                    entry["geometryEvaluationPassed"] = post_geometry["geometryPassed"]
+                    entry["minimumIntermolecularDistanceAngstrom"] = post_geometry.get(
+                        "minimumIntermolecularDistanceAngstrom"
+                    )
+                    entry["minimumVdwRatio"] = post_geometry.get("minimumVdwRatio")
+                    entry["minimumHeavyAtomVdwRatio"] = post_geometry.get(
+                        "minimumHeavyAtomVdwRatio"
+                    )
+                    entry["minimumContact"] = post_geometry.get("minimumContact")
+                    entry["clashCount"] = post_geometry.get("clashCount")
+                    entry["periodicSelfImageClashCount"] = post_geometry.get(
+                        "periodicSelfImageClashCount"
+                    )
+                    entry["densityGcm3"] = post_geometry.get("densityGcm3")
+
             if uma_ranking_enabled:
-                entry["status"] = "accepted"
-                entry["accepted"] = True
+                entry["status"] = "scored"
                 ranked_entries.append(entry)
                 continue
 
@@ -581,12 +829,13 @@ def process_generated_outputs(
                     "scoringError": str(error),
                 }
             )
-            if uma_ranking_enabled:
-                entry["status"] = "accepted"
-                entry["accepted"] = True
-            else:
-                entry["status"] = "potential_failed"
-                entry["reasons"].append(f"Potential evaluation failed: {error}")
+            entry["status"] = "potential_failed"
+            entry["reasons"].append(f"Potential evaluation failed: {error}")
+
+    if evaluator is not None:
+        close_evaluator = getattr(evaluator, "close", None)
+        if callable(close_evaluator):
+            close_evaluator()
 
     energy_rejected = 0
     if uma_ranking_enabled:
@@ -604,6 +853,13 @@ def process_generated_outputs(
                 entry["rank"] = rank
                 entry["relativeEnergyEvPerMolecule"] = relative_energy
                 entry["rankingStatus"] = "ranked"
+                entry["status"] = "accepted"
+                entry["accepted"] = True
+                entry["scientificStatus"] = (
+                    "UMA-ranked candidate with final geometry screening"
+                    if geometry_enabled
+                    else "UMA-ranked candidate without enforced geometry screening"
+                )
     elif energy_filter_requested:
         energy_window = options.get("maxRelativeEnergyEvPerMolecule")
         for scored_entries in scored_by_z.values():
@@ -620,6 +876,7 @@ def process_generated_outputs(
                 else:
                     entry["status"] = "accepted"
                     entry["accepted"] = True
+                    entry["scientificStatus"] = "potential-ranked candidate"
 
     accepted_by_z: dict[int, list[str]] = {}
     accepted_combined: list[str] = []
@@ -651,14 +908,34 @@ def process_generated_outputs(
                 "rank": entry.get("rank"),
                 "energy": entry.get("energy"),
                 "energy_units": entry.get("energyUnits"),
+                "energy_type": entry.get("energyType"),
                 "energy_ev_per_molecule": entry.get("energyEvPerMolecule"),
                 "relative_energy_ev_per_molecule": entry.get("relativeEnergyEvPerMolecule"),
                 "minimum_vdw_ratio": entry.get("minimumVdwRatio"),
+                "minimum_heavy_atom_vdw_ratio": entry.get("minimumHeavyAtomVdwRatio"),
+                "clash_count": entry.get("clashCount"),
+                "periodic_self_image_clash_count": entry.get("periodicSelfImageClashCount"),
+                "pre_optimization_minimum_vdw_ratio": (
+                    entry.get("preOptimizationGeometry") or {}
+                ).get("minimumVdwRatio"),
+                "post_optimization_minimum_vdw_ratio": (
+                    entry.get("postOptimizationGeometry") or {}
+                ).get("minimumVdwRatio"),
+                "initial_energy_ev_per_molecule": entry.get("initialEnergyEvPerMolecule"),
+                "initial_max_force_ev_per_angstrom": entry.get("initialMaxForceEvPerAngstrom"),
+                "max_force_ev_per_angstrom": entry.get("maxForceEvPerAngstrom"),
+                "force_kind": entry.get("forceKind"),
                 "optimized": entry.get("optimized"),
                 "optimization_type": entry.get("optimizationType"),
                 "optimization_steps": entry.get("optimizationSteps"),
+                "optimization_protocol": entry.get("optimizationProtocol"),
+                "optimization_converged": entry.get("optimizationConverged"),
                 "potential_provider": entry.get("potentialProvider"),
                 "potential_model": entry.get("potentialModel"),
+                "potential_task": entry.get("potentialTask"),
+                "potential_package_version": entry.get("potentialPackageVersion"),
+                "ase_version": entry.get("aseVersion"),
+                "scientific_status": entry.get("scientificStatus"),
             },
         )
         bucket = accepted_by_z.setdefault(candidate.z_value, [])
@@ -677,12 +954,47 @@ def process_generated_outputs(
         combined_path.write_text("".join(accepted_combined))
         artifact_paths.append(combined_path)
 
+    if optimized_rejected_structures:
+        rejected_path = artifacts_dir / "raw_optimized_postcheck_rejected.xyz"
+        rejected_path.write_text("".join(optimized_rejected_structures))
+        artifact_paths.append(rejected_path)
+
+    pre_geometry_rejected_count = sum(
+        entry.get("status") == "pre_geometry_rejected" for entry in candidates
+    )
+    post_geometry_rejected_count = sum(
+        entry.get("status") == "post_geometry_rejected" for entry in candidates
+    )
+    pre_geometry_passed_count = sum(
+        bool((entry.get("preOptimizationGeometry") or {}).get("geometryPassed"))
+        for entry in candidates
+    )
+    post_geometry_evaluated_count = sum(
+        entry.get("postOptimizationGeometry") is not None for entry in candidates
+    )
+    post_geometry_passed_count = sum(
+        bool((entry.get("postOptimizationGeometry") or {}).get("geometryPassed"))
+        for entry in candidates
+    )
+
     summary = {
         "generatedCount": len(candidates),
         "geometryPassedCount": sum(bool(entry.get("geometryPassed")) for entry in candidates),
-        "geometryRejectedCount": sum(entry.get("status") == "geometry_rejected" for entry in candidates),
+        "geometryRejectedCount": pre_geometry_rejected_count + post_geometry_rejected_count,
+        "preOptimizationGeometryPassedCount": pre_geometry_passed_count,
+        "preOptimizationGeometryRejectedCount": pre_geometry_rejected_count,
+        "postOptimizationGeometryEvaluatedCount": post_geometry_evaluated_count,
+        "postOptimizationGeometryPassedCount": post_geometry_passed_count,
+        "postOptimizationGeometryRejectedCount": post_geometry_rejected_count,
         "clashRejectedCount": sum(
-            entry.get("status") == "geometry_rejected" and int(entry.get("clashCount", 0)) > 0
+            (
+                entry.get("status") == "pre_geometry_rejected"
+                and int((entry.get("preOptimizationGeometry") or {}).get("clashCount", 0)) > 0
+            )
+            or (
+                entry.get("status") == "post_geometry_rejected"
+                and int((entry.get("postOptimizationGeometry") or {}).get("clashCount", 0)) > 0
+            )
             for entry in candidates
         ),
         "potentialAttemptedCount": potential_attempted,
@@ -697,8 +1009,45 @@ def process_generated_outputs(
         ),
         "potentialProvider": POTENTIAL_PROVIDER if POTENTIAL_PROVIDER != "none" else None,
         "potentialModel": potential_model if POTENTIAL_PROVIDER != "none" else None,
+        "potentialTask": potential_task,
+        "potentialPackageVersion": next(
+            (
+                entry.get("potentialPackageVersion")
+                for entry in candidates
+                if entry.get("potentialPackageVersion")
+            ),
+            None,
+        ),
+        "aseVersion": next(
+            (entry.get("aseVersion") for entry in candidates if entry.get("aseVersion")),
+            None,
+        ),
         "rigidBodySteps": RIGID_BODY_STEPS if uma_ranking_enabled else None,
         "acceptedCount": sum(bool(entry.get("accepted")) for entry in candidates),
+        "scientificScope": "generated, geometry-screened, and potential-ranked candidates; not validated stable crystals",
+        "generatorBackend": GENERATOR_BACKEND,
+        "generatorModel": V2_MODEL_NAME if GENERATOR_BACKEND == "ccdc_v2" else "omc25-legacy",
+        "generatorFeatureMode": V2_FEATURE_MODE if GENERATOR_BACKEND == "ccdc_v2" else "legacy",
+        "generatorInputComplete": (
+            V2_FEATURE_MODE != "neutral"
+            if GENERATOR_BACKEND == "ccdc_v2"
+            else True
+        ),
+        "generatorInputExact": (
+            V2_FEATURE_MODE == "factory" and V2_REQUIRE_EXACT_FEATURES
+            if GENERATOR_BACKEND == "ccdc_v2"
+            else True
+        ),
+        "generatorInputLimitations": (
+            list(V2_INFERENCE_KIT_LIMITATIONS)
+            if GENERATOR_BACKEND == "ccdc_v2" and V2_FEATURE_MODE == "inference_kit"
+            else (
+                ["Nine required CCDC-v2 molecular descriptors were replaced with zeros."]
+                if GENERATOR_BACKEND == "ccdc_v2" and V2_FEATURE_MODE == "neutral"
+                else []
+            )
+        ),
+        "generationSeed": generation_seed,
         "settings": options,
     }
 
@@ -706,7 +1055,22 @@ def process_generated_outputs(
     write_json(
         manifest_path,
         {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
+            "provenance": {
+                "generatorBackend": summary["generatorBackend"],
+                "generatorModel": summary["generatorModel"],
+                "generatorFeatureMode": summary["generatorFeatureMode"],
+                "generatorInputComplete": summary["generatorInputComplete"],
+                "generatorInputExact": summary["generatorInputExact"],
+                "generatorInputLimitations": summary["generatorInputLimitations"],
+                "generationSeed": summary["generationSeed"],
+                "potentialProvider": summary["potentialProvider"],
+                "potentialModel": summary["potentialModel"],
+                "potentialTask": summary["potentialTask"],
+                "potentialPackageVersion": summary["potentialPackageVersion"],
+                "aseVersion": summary["aseVersion"],
+                "rigidBodySteps": summary["rigidBodySteps"],
+            },
             "summary": summary,
             "candidates": candidates,
         },

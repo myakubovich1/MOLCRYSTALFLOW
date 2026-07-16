@@ -526,9 +526,21 @@ export function InteractiveStructureViewer({
                 )}
                 {typeof selectedCandidateRecord.minimumVdwRatio === "number" && (
                   <div className="flex justify-between gap-3">
-                    <span className="theme-text-muted">Minimum vdW ratio</span>
+                    <span className="theme-text-muted">
+                      {selectedCandidateRecord.postOptimizationGeometry
+                        ? "Final minimum vdW ratio"
+                        : "Minimum vdW ratio"}
+                    </span>
                     <span className="theme-text-primary font-medium">
                       {selectedCandidateRecord.minimumVdwRatio.toFixed(3)}
+                    </span>
+                  </div>
+                )}
+                {typeof selectedCandidateRecord.preOptimizationGeometry?.minimumVdwRatio === "number" && (
+                  <div className="flex justify-between gap-3">
+                    <span className="theme-text-muted">Initial minimum vdW ratio</span>
+                    <span className="theme-text-primary font-medium">
+                      {selectedCandidateRecord.preOptimizationGeometry.minimumVdwRatio.toFixed(3)}
                     </span>
                   </div>
                 )}
@@ -567,6 +579,14 @@ export function InteractiveStructureViewer({
                     <span className="theme-text-muted">Potential</span>
                     <span className="theme-text-primary font-medium">
                       {selectedCandidateRecord.potentialModel}
+                    </span>
+                  </div>
+                )}
+                {selectedCandidateRecord.potentialTask && (
+                  <div className="flex justify-between gap-3">
+                    <span className="theme-text-muted">UMA task</span>
+                    <span className="theme-text-primary font-medium">
+                      {selectedCandidateRecord.potentialTask.toUpperCase()}
                     </span>
                   </div>
                 )}
