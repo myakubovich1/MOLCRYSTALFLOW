@@ -13,6 +13,7 @@
     "validate:demo": "node scripts/validate-demo-data.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "3dmol": "^2.5.4",
     "lucide-react": "^0.511.0",
     "next": "^16.0.0",

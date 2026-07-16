@@ -118,6 +118,10 @@ NEXT_PUBLIC_SITE_URL=https://www.molcrystalflow.org
 Do not prefix `DESKTOP_BACKEND_TOKEN` with `NEXT_PUBLIC_`; it must stay
 server-side in Vercel API routes.
 
+Vercel Web Analytics is initialized once in the root application layout. It
+does not require an additional environment variable; enable Web Analytics for
+the Vercel project and deploy this version to begin collecting page views.
+
 The daily generation limit is intentionally browser-side only. It stores a
 per-browser daily counter in `localStorage`, resets on the next calendar day,
 and unlocks extra generations for that browser when the promo code matches the
