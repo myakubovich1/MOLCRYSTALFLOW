@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import (
     API_TOKEN,
+    DEFAULT_Z_VALUES,
     GENERATOR_BACKEND,
     JOBS_DIR,
+    SUPPORTED_Z_VALUES,
     V2_FEATURE_MODE,
     V2_MODEL_NAME,
     backend_capabilities,
@@ -19,7 +21,7 @@ from .config import (
 from .models import JobCreateRequest, JobStatusResponse, ArtifactInfo
 from .utils import ensure_dir, new_job_id, read_json, tail_text, write_json
 
-ALLOWED_Z_VALUES = {2, 4}
+ALLOWED_Z_VALUES = set(SUPPORTED_Z_VALUES)
 
 app = FastAPI(title="MolFlow Desktop Backend", version="2.0.0")
 
@@ -52,7 +54,7 @@ def check_runtime_config() -> None:
 
 
 def normalize_z_values(raw_z_values: list[int]) -> list[int]:
-    z_values = sorted(set(raw_z_values)) if raw_z_values else sorted(ALLOWED_Z_VALUES)
+    z_values = sorted(set(raw_z_values)) if raw_z_values else list(DEFAULT_Z_VALUES)
     unsupported = [value for value in z_values if value not in ALLOWED_Z_VALUES]
 
     if unsupported:

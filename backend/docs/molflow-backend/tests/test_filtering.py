@@ -3,6 +3,7 @@ import json
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
+from zipfile import ZipFile
 
 from app.filtering import (
     analyze_geometry,
@@ -225,6 +226,23 @@ class FilteringTests(unittest.TestCase):
                 rank_one["minimumVdwRatio"],
             )
             self.assertIn("'potential_task':'omc'", exported_rank_one.comment)
+            archive_path = artifacts / "individual_candidates.zip"
+            self.assertTrue(archive_path.exists())
+            with ZipFile(archive_path) as archive:
+                members = archive.namelist()
+                xyz_members = [name for name in members if name.endswith(".xyz")]
+                self.assertEqual(len(xyz_members), 2)
+                self.assertIn("candidates.json", members)
+                self.assertTrue(any("rank_0001_z2" in name for name in xyz_members))
+                for member in xyz_members:
+                    self.assertEqual(
+                        len(split_multi_xyz(archive.read(member).decode())),
+                        1,
+                    )
+                self.assertEqual(
+                    {entry["individualArtifact"] for entry in accepted},
+                    set(xyz_members),
+                )
 
     @patch("app.filtering.POTENTIAL_PROVIDER", "uma")
     @patch("app.filtering.UMA_MODEL", "uma-s-1p2")

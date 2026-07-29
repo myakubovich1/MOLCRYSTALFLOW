@@ -33,6 +33,7 @@ const inputModes: Array<{ value: GenerateInputMode; label: string }> = [
   { value: "upload-file", label: "Upload .xyz" },
   { value: "paste-xyz", label: "Paste XYZ" },
 ];
+const FALLBACK_Z_VALUES = [2, 4];
 
 interface GenerationPanelProps {
   onJobCreated: (jobId: string) => void;
@@ -42,8 +43,20 @@ function isXyzFile(file: File) {
   return file.name.toLowerCase().endsWith(".xyz");
 }
 
+function normalizePositiveIntegerList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const values = value.reduce<number[]>((result, entry: unknown) => {
+    if (typeof entry === "number" && Number.isInteger(entry) && entry > 0) {
+      result.push(entry);
+    }
+    return result;
+  }, []);
+  return Array.from(new Set(values)).sort((left, right) => left - right);
+}
+
 export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const zCapabilitiesLoadedRef = useRef(false);
   const [inputMode, setInputMode] = useState<GenerateInputMode>("upload-file");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pastedXyz, setPastedXyz] = useState("");
@@ -51,7 +64,8 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [numSamples, setNumSamples] = useState(20);
-  const [zValues, setZValues] = useState<Set<number>>(new Set([2, 4]));
+  const [supportedZValues, setSupportedZValues] = useState(FALLBACK_Z_VALUES);
+  const [zValues, setZValues] = useState<Set<number>>(new Set(FALLBACK_Z_VALUES));
   const [geometryFiltering, setGeometryFiltering] = useState(true);
   const [clashThresholdRatio, setClashThresholdRatio] = useState(0.65);
   const [rankingAvailable, setRankingAvailable] = useState(false);
@@ -67,6 +81,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   const remainingGenerations = remainingFreeGenerations(quota);
   const quotaAllowsSubmit = canSubmitGeneration(quota);
   const dailyLimitReached = quotaLoaded && !quota.promoUnlocked && remainingGenerations === 0;
+  const requestedCandidateCount = zValues.size * numSamples;
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +92,26 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
         const payload = await response.json();
         if (cancelled) return;
 
+        if (!response.ok) {
+          throw new Error(typeof payload?.detail === "string" ? payload.detail : "Backend health check failed.");
+        }
+
         const capabilities = payload?.capabilities;
+        const backendSupportedZValues = normalizePositiveIntegerList(capabilities?.supportedZValues);
+        const backendDefaultZValues = normalizePositiveIntegerList(capabilities?.defaultZValues).filter(
+          (value) => backendSupportedZValues.includes(value),
+        );
+        if (backendSupportedZValues.length > 0) {
+          setSupportedZValues(backendSupportedZValues);
+          if (!zCapabilitiesLoadedRef.current) {
+            const defaults =
+              backendDefaultZValues.length > 0
+                ? backendDefaultZValues
+                : FALLBACK_Z_VALUES.filter((value) => backendSupportedZValues.includes(value));
+            setZValues(new Set(defaults.length > 0 ? defaults : [backendSupportedZValues[0]]));
+            zCapabilitiesLoadedRef.current = true;
+          }
+        }
         const available = capabilities?.energyRankingAvailable === true;
         const model =
           typeof capabilities?.potentialModel === "string"
@@ -223,7 +257,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
           xyzText: normalizedInput.xyzText,
           originalFilename: normalizedInput.source.originalFilename ?? normalizedInput.source.sourceLabel,
           inputMode: inputMode === "upload-file" ? "upload" : "paste",
-          zValues: Array.from(zValues).sort(),
+          zValues: Array.from(zValues).sort((left, right) => left - right),
           numSamples,
           filtering: {
             geometryEnabled: geometryFiltering,
@@ -377,8 +411,8 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
             <div className="flex items-center justify-between">
               <label className="theme-text-secondary text-xs font-medium">Z values</label>
             </div>
-            <div className="mt-2 flex gap-2">
-              {[2, 4].map((z) => (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {supportedZValues.map((z) => (
                 <button
                   key={z}
                   type="button"
@@ -394,6 +428,15 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
                 </button>
               ))}
             </div>
+            <p className="theme-text-muted mt-2 text-[11px] leading-4">
+              {zValues.size} Z {zValues.size === 1 ? "value" : "values"} selected, producing up to{" "}
+              {requestedCandidateCount} candidates before filtering.
+            </p>
+            {Math.max(...zValues) > 4 && (
+              <p className="theme-text-muted mt-1 text-[11px] leading-4">
+                Higher Z values create larger unit cells and can take longer to generate, optimize, and screen.
+              </p>
+            )}
           </div>
 
           <div>

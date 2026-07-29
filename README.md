@@ -11,6 +11,10 @@ The current app supports the lab desktop backend:
 - generated artifacts are loaded from the backend and previewed in the browser
 - pre- and post-optimization geometry/clash screening is reported from backend candidate metadata
 - UMA-s-1p2/OMC energy ranking is displayed when the backend reports it is available
+- Z selectors are populated from backend capabilities, including Z=1 through Z=8 in the current bundle
+- the 3D viewer supports two-atom direct and nearest-periodic-image distance measurements
+- accepted structures can be downloaded individually, by Z, as one combined file, or as an individual-file ZIP
+- the results characteristics panel is resizable on desktop and remembers its width in the browser
 
 ## Stack
 

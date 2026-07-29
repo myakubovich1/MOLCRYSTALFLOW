@@ -2,6 +2,8 @@ from typing import Any, Dict, Literal, List, Optional
 
 from pydantic import BaseModel, Field
 
+from .config import DEFAULT_Z_VALUES
+
 
 class FilteringOptions(BaseModel):
     geometryEnabled: bool = True
@@ -20,7 +22,7 @@ class JobCreateRequest(BaseModel):
     xyzText: str = Field(..., min_length=1)
     originalFilename: Optional[str] = "input.xyz"
     inputMode: Optional[Literal["upload", "paste", "manual"]] = "upload"
-    zValues: List[int] = Field(default_factory=lambda: [2, 4])
+    zValues: List[int] = Field(default_factory=lambda: list(DEFAULT_Z_VALUES))
     numSamples: int = Field(default=20, ge=1, le=100)
     filtering: FilteringOptions = Field(default_factory=FilteringOptions)
 

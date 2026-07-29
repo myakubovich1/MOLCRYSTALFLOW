@@ -90,8 +90,8 @@ export function AboutPageSections() {
             </div>
             <div className="theme-subpanel rounded-2xl p-5">
               <p className="theme-text-muted text-xs font-medium uppercase tracking-wider">Supported outputs</p>
-              <p className="theme-text-primary mt-2 text-base font-medium">Z = 2 and Z = 4 candidate packings</p>
-              <p className="theme-text-secondary mt-0.5 text-xs">Downloadable XYZ files with lattice metadata and interactive previews</p>
+              <p className="theme-text-primary mt-2 text-base font-medium">Backend-supported Z candidate packings</p>
+              <p className="theme-text-secondary mt-0.5 text-xs">Selectable Z values are reported by the connected generator, with downloadable XYZ files and interactive previews</p>
             </div>
           </div>
         </section>

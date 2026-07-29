@@ -80,7 +80,7 @@ class V2AdapterTests(unittest.TestCase):
         find_spec("torch") is not None and find_spec("torch_geometric") is not None,
         "MolCrystalFlow runtime dependencies are not installed",
     )
-    def test_batch_uses_bundled_preprocess_structure_contract(self):
+    def test_batch_uses_bundled_preprocess_structure_contract_for_z_one_through_eight(self):
         import numpy as np
         import torch
         from torch_geometric.data import Batch, Data
@@ -92,32 +92,37 @@ class V2AdapterTests(unittest.TestCase):
 
         molecule = prepare_molecule(BACKEND_ROOT / "examples" / "cytosine.xyz")
         auxiliary = build_auxiliary_features(molecule, mode="inference_kit")
-        batch = _build_batch(
-            molecule=molecule,
-            auxiliary=auxiliary,
-            z_value=2,
-            torch_module=torch,
-            data_class=Data,
-            batch_class=Batch,
-            preprocess_structure=preprocess_structure,
-            device=torch.device("cpu"),
-        )
+        for z_value in range(1, 9):
+            with self.subTest(z_value=z_value):
+                batch = _build_batch(
+                    molecule=molecule,
+                    auxiliary=auxiliary,
+                    z_value=z_value,
+                    torch_module=torch,
+                    data_class=Data,
+                    batch_class=Batch,
+                    preprocess_structure=preprocess_structure,
+                    device=torch.device("cpu"),
+                )
 
-        positions = np.concatenate([molecule.coordinates, molecule.coordinates])
-        atom_types = np.tile(molecule.atomic_numbers, 2)
-        bb_indices = np.repeat(np.arange(2), molecule.atom_count)
-        expected = preprocess_structure(
-            np.eye(3) * 20.0,
-            positions,
-            atom_types,
-            bb_indices,
-        )
+                positions = np.concatenate(
+                    [molecule.coordinates for _ in range(z_value)],
+                    axis=0,
+                )
+                atom_types = np.tile(molecule.atomic_numbers, z_value)
+                bb_indices = np.repeat(np.arange(z_value), molecule.atom_count)
+                expected = preprocess_structure(
+                    np.eye(3) * 20.0,
+                    positions,
+                    atom_types,
+                    bb_indices,
+                )
 
-        self.assertTrue(torch.equal(batch.local_coords, expected["local_coords"]))
-        self.assertTrue(torch.equal(batch.eigenvalues, expected["eigenvalues"]))
-        self.assertTrue(torch.equal(batch.axis_flips, expected["axis_flips"]))
-        self.assertEqual(tuple(batch.geometric_features.shape), (2, 7))
-        self.assertEqual(tuple(batch.basic_features.shape), (2, 2))
+                self.assertTrue(torch.equal(batch.local_coords, expected["local_coords"]))
+                self.assertTrue(torch.equal(batch.eigenvalues, expected["eigenvalues"]))
+                self.assertTrue(torch.equal(batch.axis_flips, expected["axis_flips"]))
+                self.assertEqual(tuple(batch.geometric_features.shape), (z_value, 7))
+                self.assertEqual(tuple(batch.basic_features.shape), (z_value, 2))
 
 
 if __name__ == "__main__":

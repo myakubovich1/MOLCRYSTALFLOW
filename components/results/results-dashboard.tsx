@@ -44,6 +44,7 @@ function BulkDownloads({ job }: { job: JobResult }) {
   );
   const rawFiles = job.resultFiles.filter((f) => f.kind === "raw-candidate-set");
   const manifest = job.resultFiles.find((f) => f.kind === "manifest");
+  const individualArchive = job.resultFiles.find((f) => f.kind === "archive");
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -55,6 +56,16 @@ function BulkDownloads({ job }: { job: JobResult }) {
         >
           <Download className="h-4 w-4" />
           Download All (XYZ)
+        </a>
+      )}
+      {individualArchive && (
+        <a
+          href={individualArchive.href}
+          download
+          className="theme-button-outline inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download separately (ZIP)
         </a>
       )}
       {zFiles.map((file) => (

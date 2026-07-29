@@ -93,7 +93,7 @@ export interface ResultFile {
   href: string;
   description: string;
   sizeLabel: string;
-  kind: "bundle" | "candidate-set" | "raw-candidate-set" | "manifest";
+  kind: "bundle" | "candidate-set" | "raw-candidate-set" | "manifest" | "archive";
 }
 
 export interface FilterSummary {
@@ -138,6 +138,7 @@ export interface CandidateFilterRecord {
   zValue: number;
   sourceIndex: number;
   acceptedIndex?: number;
+  individualArtifact?: string;
   status: string;
   accepted: boolean;
   reasons: string[];

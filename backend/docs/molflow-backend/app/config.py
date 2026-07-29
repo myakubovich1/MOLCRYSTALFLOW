@@ -70,6 +70,32 @@ def env_flag(name: str, default: bool = False) -> bool:
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
+def env_positive_int_list(name: str, default: list[int]) -> list[int]:
+    raw_value = os.environ.get(name)
+    if raw_value is None or not raw_value.strip():
+        return list(default)
+
+    values: list[int] = []
+    for raw_item in raw_value.split(","):
+        item = raw_item.strip()
+        if not item:
+            continue
+        try:
+            value = int(item)
+        except ValueError as error:
+            raise ValueError(
+                f"{name} must be a comma-separated list of positive integers."
+            ) from error
+        if value < 1:
+            raise ValueError(f"{name} must contain only positive integers.")
+        if value not in values:
+            values.append(value)
+
+    if not values:
+        raise ValueError(f"{name} must contain at least one positive integer.")
+    return sorted(values)
+
+
 V2_REQUIRE_EXACT_FEATURES = env_flag("MOLFLOW_V2_REQUIRE_EXACT_FEATURES", False)
 V2_ALLOW_NEUTRAL_FEATURES = env_flag("MOLFLOW_V2_ALLOW_NEUTRAL_FEATURES", False)
 
@@ -86,7 +112,22 @@ PYTHONPATH_VALUE = os.pathsep.join(
     if value
 )
 
-DEFAULT_Z_VALUES   = [2, 4]
+SUPPORTED_Z_VALUES = env_positive_int_list(
+    "MOLFLOW_SUPPORTED_Z_VALUES",
+    list(range(1, 9)) if GENERATOR_BACKEND == "ccdc_v2" else [2, 4],
+)
+DEFAULT_Z_VALUES = env_positive_int_list(
+    "MOLFLOW_DEFAULT_Z_VALUES",
+    [2, 4],
+)
+unsupported_default_z_values = sorted(
+    set(DEFAULT_Z_VALUES).difference(SUPPORTED_Z_VALUES)
+)
+if unsupported_default_z_values:
+    raise ValueError(
+        "MOLFLOW_DEFAULT_Z_VALUES must be a subset of MOLFLOW_SUPPORTED_Z_VALUES; "
+        f"unsupported defaults: {', '.join(str(value) for value in unsupported_default_z_values)}."
+    )
 DEFAULT_NUM_SAMPLES = 20
 
 API_TOKEN = os.environ.get("MOLFLOW_API_TOKEN", "change-this-in-production")
@@ -431,7 +472,12 @@ def backend_capabilities() -> dict:
         "rigidBodyDetail": rigid_body_errors[0] if rigid_body_errors else "Rigid-body optimization is configured.",
         "generatorBackend": GENERATOR_BACKEND,
         "modelVersion": V2_MODEL_NAME if GENERATOR_BACKEND == "ccdc_v2" else "omc25-legacy",
-        "supportedZValues": DEFAULT_Z_VALUES,
+        "supportedZValues": SUPPORTED_Z_VALUES,
+        "defaultZValues": DEFAULT_Z_VALUES,
+        "zValueSupportDetail": (
+            "The configured generator accepts these Z values. Candidate quality and "
+            "acceptance rates must still be benchmarked separately for each Z."
+        ),
         "samplingSteps": V2_NUM_TIMESTEPS if GENERATOR_BACKEND == "ccdc_v2" else None,
         "modelInputMode": V2_FEATURE_MODE if GENERATOR_BACKEND == "ccdc_v2" else "legacy",
         "modelInputComplete": complete_features,

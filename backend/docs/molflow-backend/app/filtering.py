@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from .config import (
     GENERATOR_BACKEND,
@@ -880,6 +881,8 @@ def process_generated_outputs(
 
     accepted_by_z: dict[int, list[str]] = {}
     accepted_combined: list[str] = []
+    accepted_individuals: list[tuple[str, str]] = []
+
     def accepted_sort_key(entry: dict[str, Any]) -> tuple[int, int, int, float, int]:
         rank = entry.get("rank")
         if isinstance(rank, (int, float)):
@@ -942,6 +945,19 @@ def process_generated_outputs(
         entry["acceptedIndex"] = len(bucket)
         bucket.append(structure_text)
         accepted_combined.append(structure_text)
+        rank = entry.get("rank")
+        rank_label = (
+            f"rank_{int(rank):04d}"
+            if isinstance(rank, (int, float))
+            else f"accepted_{entry['acceptedIndex'] + 1:04d}"
+        )
+        source_label = f"source_{int(entry['sourceIndex']) + 1:04d}"
+        individual_name = (
+            f"accepted/z{candidate.z_value}/"
+            f"{rank_label}_z{candidate.z_value}_{source_label}.xyz"
+        )
+        entry["individualArtifact"] = individual_name
+        accepted_individuals.append((individual_name, structure_text))
 
     artifact_paths: list[Path] = []
     for z_value, structures in accepted_by_z.items():
@@ -1076,6 +1092,21 @@ def process_generated_outputs(
         },
     )
     artifact_paths.append(manifest_path)
+
+    if accepted_individuals:
+        archive_path = artifacts_dir / "individual_candidates.zip"
+        with ZipFile(archive_path, "w", compression=ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "README.txt",
+                "MolCrystalFlow accepted candidates\n"
+                "Each XYZ file contains one accepted candidate exactly as exported in "
+                "the ranked per-Z and combined files. candidates.json contains filtering, "
+                "optimization, energy, and provenance metadata.\n",
+            )
+            archive.write(manifest_path, arcname="candidates.json")
+            for individual_name, structure_text in accepted_individuals:
+                archive.writestr(individual_name, structure_text)
+        artifact_paths.append(archive_path)
 
     for raw_path in sorted(artifacts_dir.glob("raw_*.xyz")):
         artifact_paths.append(raw_path)

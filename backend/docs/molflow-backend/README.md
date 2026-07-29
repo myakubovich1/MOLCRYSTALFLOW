@@ -13,7 +13,8 @@ legacy OMC25 generator with the bundled CCDC v2 model.
   auxiliary descriptors.
 - Model inputs constructed through the bundled MolCrystalFlow
   `preprocess_structure` implementation.
-- Z=2 and Z=4 candidate generation.
+- Configurable Z=1 through Z=8 candidate generation, with Z=2 and Z=4
+  selected by default for backward compatibility.
 - Per-job output directories.
 - Single-GPU execution locking.
 - Pre- and post-optimization geometry and periodic clash filtering.
@@ -104,6 +105,17 @@ cp .env.example .env
 
 Edit `.env` and set `MOLFLOW_API_TOKEN` to the same value as
 `DESKTOP_BACKEND_TOKEN` in the frontend `.env.local`.
+
+The copied environment should also contain:
+
+```bash
+MOLFLOW_SUPPORTED_Z_VALUES=1,2,3,4,5,6,7,8
+MOLFLOW_DEFAULT_Z_VALUES=2,4
+```
+
+The first setting defines the values accepted by the backend API and advertised
+to the frontend. The second setting only controls the initial frontend
+selection and the backend default when a client omits `zValues`.
 
 When copying an older `.env`, replace any previous neutral feature setting:
 
@@ -210,6 +222,9 @@ The health payload reports:
 
 - `generatorBackend`
 - `modelVersion`
+- `supportedZValues`
+- `defaultZValues`
+- `zValueSupportDetail`
 - `samplingSteps`
 - `modelInputMode`
 - `modelInputComplete`
@@ -248,6 +263,7 @@ Generated artifacts:
 - `raw_pred_combined.xyz`
 - `crystals_z*.xyz`
 - `pred_combined.xyz`
+- `individual_candidates.zip`, containing one XYZ file per accepted candidate
 - `candidates.json`
 - `raw_optimized_postcheck_rejected.xyz` when optimized candidates fail the
   final geometry check
@@ -305,6 +321,18 @@ the final exported coordinates when optimization ran. Metadata also includes
 `optimized`, `optimizationType`, `optimizationSteps`, `optimizationProtocol`,
 `potentialProvider`, `potentialModel`, `potentialTask`, and `scoringError` if
 ranking could not run.
+
+`individual_candidates.zip` preserves the same accepted structures as the
+ranked combined files. Its `candidates.json` manifest maps each accepted record
+to `individualArtifact`, the corresponding one-structure XYZ member. This
+avoids reparsing a multi-frame XYZ file while preserving ranking, filtering,
+energy, and provenance metadata.
+
+The CCDC-v2 adapter constructs shape-correct inputs for Z=1 through Z=8, and the
+server validation suite checks that full range. This is technical support, not
+a claim that all Z values have equal predictive performance. Acceptance rates,
+cell distributions, and known-crystal recovery should be benchmarked per Z
+before drawing scientific conclusions.
 
 The UMA value is total potential energy normalized per molecule for ranking
 candidates with identical composition and settings. It is not a lattice energy,

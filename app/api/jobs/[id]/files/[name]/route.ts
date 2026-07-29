@@ -27,11 +27,12 @@ export async function GET(
 
     const blob = await res.arrayBuffer();
     const contentType = res.headers.get("content-type") || "application/octet-stream";
+    const disposition = name.toLowerCase().endsWith(".zip") ? "attachment" : "inline";
 
     return new Response(blob, {
       headers: {
         "content-type": contentType,
-        "content-disposition": `inline; filename="${name}"`,
+        "content-disposition": `${disposition}; filename="${name}"`,
       },
     });
   } catch (err) {

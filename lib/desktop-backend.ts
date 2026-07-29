@@ -145,6 +145,13 @@ function describeArtifact(name: string) {
     };
   }
 
+  if (lower === "individual_candidates.zip") {
+    return {
+      description: "Accepted candidates packaged as one XYZ file per structure with the filtering manifest.",
+      kind: "archive" as const,
+    };
+  }
+
   if (lower.startsWith("raw_")) {
     return {
       description: "Unfiltered generator output retained for audit and downstream analysis.",

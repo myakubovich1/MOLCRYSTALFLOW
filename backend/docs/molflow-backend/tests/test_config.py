@@ -1,3 +1,4 @@
+import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -6,6 +7,24 @@ from app import config
 
 
 class ScientificConfigurationTests(unittest.TestCase):
+    def test_supported_z_values_default_to_one_through_eight(self):
+        self.assertEqual(config.SUPPORTED_Z_VALUES, list(range(1, 9)))
+        self.assertEqual(config.DEFAULT_Z_VALUES, [2, 4])
+        capabilities = config.backend_capabilities()
+        self.assertEqual(capabilities["supportedZValues"], list(range(1, 9)))
+        self.assertEqual(capabilities["defaultZValues"], [2, 4])
+        self.assertIn("benchmark", capabilities["zValueSupportDetail"])
+
+    def test_positive_integer_list_configuration_is_sorted_and_deduplicated(self):
+        with patch.dict(os.environ, {"TEST_Z_VALUES": "8, 1, 4, 4"}, clear=False):
+            values = config.env_positive_int_list("TEST_Z_VALUES", [2, 4])
+        self.assertEqual(values, [1, 4, 8])
+
+    def test_positive_integer_list_configuration_rejects_invalid_values(self):
+        with patch.dict(os.environ, {"TEST_Z_VALUES": "1,0,4"}, clear=False):
+            with self.assertRaisesRegex(ValueError, "positive integers"):
+                config.env_positive_int_list("TEST_Z_VALUES", [2, 4])
+
     def test_rigid_body_factory_runtime_validator_fails_closed(self):
         def fail_validation():
             raise RuntimeError("missing rigid constraint")
