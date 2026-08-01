@@ -5,7 +5,7 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, LoaderCircle, RotateCcw, Ruler, ZoomIn, ZoomOut } from "lucide-react";
 
 import {
@@ -152,7 +152,12 @@ export function InteractiveStructureViewer({
   const measurementAtomsRef = useRef<MeasuredAtom[]>([]);
   const measurementShapesRef = useRef<unknown[]>([]);
   const measurementLabelsRef = useRef<unknown[]>([]);
+  const measurementModeRef = useRef(false);
   const resizingInspectorRef = useRef(false);
+  const inspectorWidthRef = useRef(DEFAULT_INSPECTOR_WIDTH);
+  const inspectorResizeFrameRef = useRef<number | null>(null);
+  const pendingInspectorWidthRef = useRef<number | null>(null);
+  const inspectorDragBoundsRef = useRef<{ right: number; width: number } | null>(null);
 
   const availableSources = useMemo(() => buildViewerSourcesFromArtifacts(resultFiles), [resultFiles]);
   const artifactMap = useMemo(() => new Map(resultFiles.map((file) => [file.name, file])), [resultFiles]);
@@ -175,9 +180,12 @@ export function InteractiveStructureViewer({
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const storedWidth = Number(window.localStorage.getItem(INSPECTOR_WIDTH_STORAGE_KEY));
+    const storedValue = window.localStorage.getItem(INSPECTOR_WIDTH_STORAGE_KEY);
+    const storedWidth = storedValue === null ? Number.NaN : Number(storedValue);
     if (Number.isFinite(storedWidth)) {
-      setInspectorWidth(Math.min(MAX_INSPECTOR_WIDTH, Math.max(MIN_INSPECTOR_WIDTH, storedWidth)));
+      const nextWidth = Math.min(MAX_INSPECTOR_WIDTH, Math.max(MIN_INSPECTOR_WIDTH, storedWidth));
+      inspectorWidthRef.current = nextWidth;
+      setInspectorWidth(nextWidth);
     }
   }, []);
 
@@ -200,7 +208,10 @@ export function InteractiveStructureViewer({
   const selectedSource = selectedArtifactName ? sourcesByArtifact[selectedArtifactName] : undefined;
   const selectedStructure = selectedSource?.structures[selectedCandidateIndex] ?? null;
   const selectedArtifact = selectedArtifactName ? artifactMap.get(selectedArtifactName) : undefined;
-  const parsedSelectedStructure = selectedStructure ? parseXyzText(selectedStructure) : null;
+  const parsedSelectedStructure = useMemo(
+    () => (selectedStructure ? parseXyzText(selectedStructure) : null),
+    [selectedStructure],
+  );
   const latticeParameters = parsedSelectedStructure?.latticeParameters;
   const latticeVectors = parsedSelectedStructure?.latticeVectors;
   const selectedCandidateRecord = useMemo(() => {
@@ -218,7 +229,7 @@ export function InteractiveStructureViewer({
 
   function clearMeasurement() {
     const viewer = viewerRef.current;
-    if (viewer) {
+    if (viewer && (measurementShapesRef.current.length > 0 || measurementLabelsRef.current.length > 0)) {
       measurementShapesRef.current.forEach((shape) => viewer.removeShape(shape));
       measurementLabelsRef.current.forEach((label) => viewer.removeLabel(label));
       viewer.render();
@@ -226,10 +237,88 @@ export function InteractiveStructureViewer({
     measurementAtomsRef.current = [];
     measurementShapesRef.current = [];
     measurementLabelsRef.current = [];
-    setMeasurementAtoms([]);
+    setMeasurementAtoms((current) => (current.length === 0 ? current : []));
     setDistanceMeasurement(null);
     setMeasurementError(null);
   }
+
+  const handleMeasuredAtomClick = useCallback((atom: ThreeDMolAtom, clickedViewer: ThreeDMolViewer) => {
+    if (measurementAtomsRef.current.length >= 2) {
+      measurementShapesRef.current.forEach((shape) => clickedViewer.removeShape(shape));
+      measurementLabelsRef.current.forEach((label) => clickedViewer.removeLabel(label));
+      measurementAtomsRef.current = [];
+      measurementShapesRef.current = [];
+      measurementLabelsRef.current = [];
+      setDistanceMeasurement(null);
+      setMeasurementError(null);
+    }
+
+    const measuredAtom = normalizedMeasuredAtom(atom);
+    const nextAtoms = [...measurementAtomsRef.current, measuredAtom];
+    measurementAtomsRef.current = nextAtoms;
+    setMeasurementAtoms(nextAtoms);
+    measurementShapesRef.current.push(
+      clickedViewer.addSphere({
+        center: { x: atom.x, y: atom.y, z: atom.z },
+        radius: 0.24,
+        color: nextAtoms.length === 1 ? "#f59e0b" : "#06b6d4",
+        opacity: 0.9,
+      }),
+    );
+
+    if (nextAtoms.length === 2) {
+      const [first, second] = nextAtoms;
+      const directDistance = cartesianDistance(first.position, second.position);
+      measurementShapesRef.current.push(
+        clickedViewer.addLine({
+          start: { x: first.position[0], y: first.position[1], z: first.position[2] },
+          end: { x: second.position[0], y: second.position[1], z: second.position[2] },
+          color: "#0891b2",
+          dashed: true,
+          dashLength: 0.2,
+          gapLength: 0.12,
+          linewidth: 2,
+        }),
+      );
+      measurementLabelsRef.current.push(
+        clickedViewer.addLabel(`${directDistance.toFixed(3)} Å`, {
+          position: midpoint(first.position, second.position),
+          backgroundColor: "#07111b",
+          backgroundOpacity: 0.82,
+          fontColor: "#ffffff",
+          fontSize: 13,
+          borderColor: "#22d3ee",
+          borderThickness: 1,
+          inFront: true,
+        }),
+      );
+
+      const result: DistanceMeasurement = {
+        first,
+        second,
+        directDistance,
+      };
+      if (latticeVectors) {
+        try {
+          const periodic = minimumPeriodicDistance(
+            first.position,
+            second.position,
+            latticeVectors,
+          );
+          result.periodicDistance = periodic.distance;
+          result.imageShift = periodic.imageShift;
+        } catch (error) {
+          setMeasurementError(
+            error instanceof Error
+              ? `Periodic distance unavailable: ${error.message}`
+              : "Periodic distance could not be calculated.",
+          );
+        }
+      }
+      setDistanceMeasurement(result);
+    }
+    clickedViewer.render();
+  }, [latticeVectors]);
 
   useEffect(() => {
     const manifest = resultFiles.find((file) => file.kind === "manifest");
@@ -355,7 +444,7 @@ export function InteractiveStructureViewer({
       measurementAtomsRef.current = [];
       measurementShapesRef.current = [];
       measurementLabelsRef.current = [];
-      setMeasurementAtoms([]);
+      setMeasurementAtoms((current) => (current.length === 0 ? current : []));
       setDistanceMeasurement(null);
       setMeasurementError(null);
       viewer.setBackgroundColor(getViewerBackgroundColor(), 1);
@@ -365,104 +454,53 @@ export function InteractiveStructureViewer({
       if (resolvedLatticeVectors) {
         drawCrystalLattice(viewer, resolvedLatticeVectors, resolvedRepeats);
       }
-      if (measurementMode) {
-        viewer.setClickable({}, true, (atom, clickedViewer) => {
-          if (measurementAtomsRef.current.length >= 2) {
-            measurementShapesRef.current.forEach((shape) => clickedViewer.removeShape(shape));
-            measurementLabelsRef.current.forEach((label) => clickedViewer.removeLabel(label));
-            measurementAtomsRef.current = [];
-            measurementShapesRef.current = [];
-            measurementLabelsRef.current = [];
-            setDistanceMeasurement(null);
-            setMeasurementError(null);
-          }
-
-          const measuredAtom = normalizedMeasuredAtom(atom);
-          const nextAtoms = [...measurementAtomsRef.current, measuredAtom];
-          measurementAtomsRef.current = nextAtoms;
-          setMeasurementAtoms(nextAtoms);
-          measurementShapesRef.current.push(
-            clickedViewer.addSphere({
-              center: { x: atom.x, y: atom.y, z: atom.z },
-              radius: 0.24,
-              color: nextAtoms.length === 1 ? "#f59e0b" : "#06b6d4",
-              opacity: 0.9,
-            }),
-          );
-
-          if (nextAtoms.length === 2) {
-            const [first, second] = nextAtoms;
-            const directDistance = cartesianDistance(first.position, second.position);
-            measurementShapesRef.current.push(
-              clickedViewer.addLine({
-                start: { x: first.position[0], y: first.position[1], z: first.position[2] },
-                end: { x: second.position[0], y: second.position[1], z: second.position[2] },
-                color: "#0891b2",
-                dashed: true,
-                dashLength: 0.2,
-                gapLength: 0.12,
-                linewidth: 2,
-              }),
-            );
-            measurementLabelsRef.current.push(
-              clickedViewer.addLabel(`${directDistance.toFixed(3)} Å`, {
-                position: midpoint(first.position, second.position),
-                backgroundColor: "#07111b",
-                backgroundOpacity: 0.82,
-                fontColor: "#ffffff",
-                fontSize: 13,
-                borderColor: "#22d3ee",
-                borderThickness: 1,
-                inFront: true,
-              }),
-            );
-
-            const result: DistanceMeasurement = {
-              first,
-              second,
-              directDistance,
-            };
-            if (resolvedLatticeVectors) {
-              try {
-                const periodic = minimumPeriodicDistance(
-                  first.position,
-                  second.position,
-                  resolvedLatticeVectors,
-                );
-                result.periodicDistance = periodic.distance;
-                result.imageShift = periodic.imageShift;
-              } catch (error) {
-                setMeasurementError(
-                  error instanceof Error
-                    ? `Periodic distance unavailable: ${error.message}`
-                    : "Periodic distance could not be calculated.",
-                );
-              }
-            }
-            setDistanceMeasurement(result);
-          }
-          clickedViewer.render();
-        });
-      }
+      viewer.setClickable(
+        {},
+        measurementModeRef.current,
+        measurementModeRef.current ? handleMeasuredAtomClick : undefined,
+      );
+      viewer.resize();
       viewer.zoomTo();
       viewer.render();
-      viewer.resize();
     }
 
     void renderStructure();
     return () => { isCancelled = true; };
-  }, [displayStructure, latticeVectors, measurementMode, packingMode, projectionMode, resolvedTheme, styleMode]);
+  }, [displayStructure, handleMeasuredAtomClick, latticeVectors, packingMode, projectionMode, resolvedTheme, styleMode]);
+
+  useEffect(() => {
+    measurementModeRef.current = measurementMode;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    viewer.setClickable({}, measurementMode, measurementMode ? handleMeasuredAtomClick : undefined);
+  }, [handleMeasuredAtomClick, measurementMode]);
 
   useEffect(() => {
     const container = viewerContainerRef.current;
     if (!container || typeof ResizeObserver === "undefined") return;
 
+    let resizeFrame: number | null = null;
     const observer = new ResizeObserver(() => {
-      viewerRef.current?.resize();
-      viewerRef.current?.render();
+      if (resizeFrame !== null) return;
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        viewerRef.current?.resize();
+        viewerRef.current?.render();
+      });
     });
     observer.observe(container);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (inspectorResizeFrameRef.current !== null) {
+      window.cancelAnimationFrame(inspectorResizeFrameRef.current);
+    }
+    viewerRef.current?.clear();
+    viewerRef.current = null;
   }, []);
 
   if (availableSources.length === 0) {
@@ -481,8 +519,8 @@ export function InteractiveStructureViewer({
     viewerRef.current?.zoom(factor, 180, true);
     viewerRef.current?.render();
   };
-  const clampInspectorWidth = (requestedWidth: number) => {
-    const layoutWidth = viewerLayoutRef.current?.getBoundingClientRect().width;
+  const clampInspectorWidth = (requestedWidth: number, measuredLayoutWidth?: number) => {
+    const layoutWidth = measuredLayoutWidth ?? viewerLayoutRef.current?.getBoundingClientRect().width;
     const responsiveMaximum =
       typeof layoutWidth === "number"
         ? Math.max(MIN_INSPECTOR_WIDTH, Math.min(MAX_INSPECTOR_WIDTH, layoutWidth - 420))
@@ -491,23 +529,50 @@ export function InteractiveStructureViewer({
   };
   const updateInspectorWidth = (requestedWidth: number) => {
     const nextWidth = clampInspectorWidth(requestedWidth);
-    setInspectorWidth(nextWidth);
+    inspectorWidthRef.current = nextWidth;
+    setInspectorWidth((current) => (current === nextWidth ? current : nextWidth));
     window.localStorage.setItem(INSPECTOR_WIDTH_STORAGE_KEY, String(nextWidth));
   };
   const handleInspectorPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const bounds = viewerLayoutRef.current?.getBoundingClientRect();
+    if (!bounds) return;
     resizingInspectorRef.current = true;
+    inspectorDragBoundsRef.current = { right: bounds.right, width: bounds.width };
     setIsResizingInspector(true);
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
   const handleInspectorPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!resizingInspectorRef.current || !viewerLayoutRef.current) return;
-    const bounds = viewerLayoutRef.current.getBoundingClientRect();
-    updateInspectorWidth(bounds.right - event.clientX);
+    const bounds = inspectorDragBoundsRef.current;
+    if (!resizingInspectorRef.current || !bounds) return;
+
+    const nextWidth = clampInspectorWidth(bounds.right - event.clientX, bounds.width);
+    inspectorWidthRef.current = nextWidth;
+    pendingInspectorWidthRef.current = nextWidth;
+    if (inspectorResizeFrameRef.current !== null) return;
+
+    inspectorResizeFrameRef.current = window.requestAnimationFrame(() => {
+      inspectorResizeFrameRef.current = null;
+      const pendingWidth = pendingInspectorWidthRef.current;
+      pendingInspectorWidthRef.current = null;
+      if (pendingWidth !== null) {
+        setInspectorWidth((current) => (current === pendingWidth ? current : pendingWidth));
+      }
+    });
   };
   const stopInspectorResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     resizingInspectorRef.current = false;
+    inspectorDragBoundsRef.current = null;
     setIsResizingInspector(false);
+    if (inspectorResizeFrameRef.current !== null) {
+      window.cancelAnimationFrame(inspectorResizeFrameRef.current);
+      inspectorResizeFrameRef.current = null;
+    }
+    pendingInspectorWidthRef.current = null;
+    setInspectorWidth((current) =>
+      current === inspectorWidthRef.current ? current : inspectorWidthRef.current,
+    );
+    window.localStorage.setItem(INSPECTOR_WIDTH_STORAGE_KEY, String(inspectorWidthRef.current));
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
