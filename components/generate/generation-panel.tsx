@@ -66,6 +66,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
   const [numSamples, setNumSamples] = useState(20);
   const [supportedZValues, setSupportedZValues] = useState(FALLBACK_Z_VALUES);
   const [zValues, setZValues] = useState<Set<number>>(new Set(FALLBACK_Z_VALUES));
+  const [zSupportDetail, setZSupportDetail] = useState("Checking supported Z values...");
   const [geometryFiltering, setGeometryFiltering] = useState(true);
   const [clashThresholdRatio, setClashThresholdRatio] = useState(0.65);
   const [rankingAvailable, setRankingAvailable] = useState(false);
@@ -103,6 +104,9 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
         );
         if (backendSupportedZValues.length > 0) {
           setSupportedZValues(backendSupportedZValues);
+          setZSupportDetail(
+            `Connected backend supports ${backendSupportedZValues.map((value) => `Z=${value}`).join(", ")}.`,
+          );
           if (!zCapabilitiesLoadedRef.current) {
             const defaults =
               backendDefaultZValues.length > 0
@@ -111,6 +115,8 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
             setZValues(new Set(defaults.length > 0 ? defaults : [backendSupportedZValues[0]]));
             zCapabilitiesLoadedRef.current = true;
           }
+        } else {
+          setZSupportDetail("Backend did not report its supported Z values; showing the Z=2 and Z=4 fallback.");
         }
         const available = capabilities?.energyRankingAvailable === true;
         const model =
@@ -137,6 +143,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
         );
       } catch {
         if (!cancelled) {
+          setZSupportDetail("Backend capabilities are unavailable; showing the Z=2 and Z=4 fallback.");
           setRankingAvailable(false);
           setRankingLabel("Backend capability unavailable.");
         }
@@ -417,6 +424,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
                   key={z}
                   type="button"
                   onClick={() => toggleZValue(z)}
+                  aria-pressed={zValues.has(z)}
                   className={cn(
                     "rounded-lg px-4 py-2 text-sm font-medium transition",
                     zValues.has(z)
@@ -432,6 +440,7 @@ export function GenerationPanel({ onJobCreated }: GenerationPanelProps) {
               {zValues.size} Z {zValues.size === 1 ? "value" : "values"} selected, producing up to{" "}
               {requestedCandidateCount} candidates before filtering.
             </p>
+            <p className="theme-text-muted mt-1 text-[11px] leading-4">{zSupportDetail}</p>
             {Math.max(...zValues) > 4 && (
               <p className="theme-text-muted mt-1 text-[11px] leading-4">
                 Higher Z values create larger unit cells and can take longer to generate, optimize, and screen.

@@ -473,6 +473,8 @@ export function InteractiveStructureViewer({
     const viewer = viewerRef.current;
     if (!viewer) return;
     viewer.setClickable({}, measurementMode, measurementMode ? handleMeasuredAtomClick : undefined);
+    // 3Dmol rebuilds atom hit-test geometry and its clickable list during render().
+    viewer.render();
   }, [handleMeasuredAtomClick, measurementMode]);
 
   useEffect(() => {
@@ -577,6 +579,17 @@ export function InteractiveStructureViewer({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
+  const handleInspectorLostPointerCapture = () => {
+    if (!resizingInspectorRef.current) return;
+    resizingInspectorRef.current = false;
+    inspectorDragBoundsRef.current = null;
+    pendingInspectorWidthRef.current = null;
+    setIsResizingInspector(false);
+    setInspectorWidth((current) =>
+      current === inspectorWidthRef.current ? current : inspectorWidthRef.current,
+    );
+    window.localStorage.setItem(INSPECTOR_WIDTH_STORAGE_KEY, String(inspectorWidthRef.current));
+  };
   const handleInspectorKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowLeft") {
       updateInspectorWidth(inspectorWidth + 16);
@@ -619,6 +632,7 @@ export function InteractiveStructureViewer({
                 key={source.artifactName}
                 type="button"
                 onClick={() => setSelectedArtifactName(source.artifactName)}
+                aria-pressed={selectedArtifactName === source.artifactName}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-medium transition",
                   selectedArtifactName === source.artifactName
@@ -645,6 +659,7 @@ export function InteractiveStructureViewer({
                 key={value}
                 type="button"
                 onClick={() => setStyleMode(value as CrystalStyleMode)}
+                aria-pressed={styleMode === value}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-medium transition",
                   styleMode === value
@@ -669,6 +684,7 @@ export function InteractiveStructureViewer({
                 type="button"
                 onClick={() => setPackingMode(value as CrystalPackingMode)}
                 disabled={value === "packing" && !latticeVectors}
+                aria-pressed={packingMode === value}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
                   packingMode === value
@@ -692,6 +708,7 @@ export function InteractiveStructureViewer({
                 key={value}
                 type="button"
                 onClick={() => setProjectionMode(value as CrystalProjectionMode)}
+                aria-pressed={projectionMode === value}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-medium transition",
                   projectionMode === value
@@ -741,9 +758,26 @@ export function InteractiveStructureViewer({
         <div className="relative">
           <div
             ref={viewerContainerRef}
-            className="min-h-[34rem] rounded-xl border border-[color:var(--surface-border)] lg:min-h-[42rem] xl:min-h-[50rem]"
+            className={cn(
+              "min-h-[34rem] rounded-xl border border-[color:var(--surface-border)] lg:min-h-[42rem] xl:min-h-[50rem]",
+              measurementMode && "cursor-crosshair",
+            )}
             style={{ background: "var(--molecule-surface)" }}
           />
+          {measurementMode && selectedStructure && !isLoadingSelectedArtifact && !viewerError && (
+            <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-[color:var(--accent-border)] bg-[color:var(--panel-fill)]/90 px-3 py-2 shadow-sm backdrop-blur">
+              <p className="theme-text-accent text-[11px] font-semibold">
+                {measurementAtoms.length === 0
+                  ? "Select atom 1 of 2"
+                  : measurementAtoms.length === 1
+                    ? "Select atom 2 of 2"
+                    : "Distance measured"}
+              </p>
+              <p className="theme-text-muted mt-0.5 text-[10px]">
+                Click directly on an atom sphere.
+              </p>
+            </div>
+          )}
           <div className="absolute right-3 top-3 z-10 overflow-hidden rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--panel-fill)]/90 shadow-sm backdrop-blur">
             <button
               type="button"
@@ -783,11 +817,13 @@ export function InteractiveStructureViewer({
           aria-valuemin={MIN_INSPECTOR_WIDTH}
           aria-valuemax={MAX_INSPECTOR_WIDTH}
           aria-valuenow={Math.round(inspectorWidth)}
+          aria-valuetext={`${Math.round(inspectorWidth)} pixels wide`}
           tabIndex={0}
           onPointerDown={handleInspectorPointerDown}
           onPointerMove={handleInspectorPointerMove}
           onPointerUp={stopInspectorResize}
           onPointerCancel={stopInspectorResize}
+          onLostPointerCapture={handleInspectorLostPointerCapture}
           onDoubleClick={() => updateInspectorWidth(DEFAULT_INSPECTOR_WIDTH)}
           onKeyDown={handleInspectorKeyDown}
           className={cn(

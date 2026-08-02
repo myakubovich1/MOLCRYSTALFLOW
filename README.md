@@ -16,6 +16,12 @@ The current app supports the lab desktop backend:
 - accepted structures can be downloaded individually, by Z, as one combined file, or as an individual-file ZIP
 - the results characteristics panel is resizable on desktop and remembers its width in the browser
 
+In a completed result, select **Measure distance**, then click two atom spheres in
+the 3D viewer. The viewer reports both the displayed Cartesian distance and, when
+lattice vectors are available, the nearest-periodic-image distance. Drag the thin
+vertical divider immediately to the left of the characteristics panel to resize it;
+double-click the divider to restore its default width.
+
 ## Stack
 
 - Next.js App Router

@@ -16,7 +16,10 @@ class ZValueValidationTests(unittest.TestCase):
             patch.object(main, "ALLOWED_Z_VALUES", set(range(1, 9))),
             patch.object(main, "DEFAULT_Z_VALUES", [2, 4]),
         ):
-            self.assertEqual(main.normalize_z_values([8, 1, 4, 4]), [1, 4, 8])
+            self.assertEqual(
+                main.normalize_z_values([8, 1, 4, 4, 2, 3, 5, 6, 7]),
+                list(range(1, 9)),
+            )
 
     def test_empty_request_uses_configured_defaults(self):
         with (

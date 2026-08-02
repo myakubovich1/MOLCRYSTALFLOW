@@ -2,7 +2,10 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-import numpy as np
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    np = None
 
 from app.v2_auxiliary_features import (
     BASIC_FEATURE_NAMES,
@@ -22,6 +25,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 ACACPD_PATH = BACKEND_ROOT / "tests" / "fixtures" / "acacpd.xyz"
 
 
+@unittest.skipIf(np is None, "NumPy is not installed")
 class V2AuxiliaryFeatureTests(unittest.TestCase):
     def test_acacpd_matches_lab_inference_kit_reference(self):
         molecule = prepare_molecule(ACACPD_PATH)
