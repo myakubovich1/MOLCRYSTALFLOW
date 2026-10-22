@@ -1,57 +1,119 @@
-# MolCrystalFlow Demo
+# MolCrystalFlow
 
-MolCrystalFlow Demo is a frontend for accepting molecular conformer input,
-submitting it to the lab MolFlow backend, and previewing generated crystal
-structure candidates.
+MolCrystalFlow is a web interface for generating molecular crystal packing
+candidates from an XYZ conformer. It submits jobs to a GPU backend and provides
+interactive structure inspection, screening summaries, energy rankings, and
+downloadable results.
 
-The current app supports the lab desktop backend:
+This repository contains the web application, its API proxy routes, and the
+packaged FastAPI backend. The scientific model is maintained in the
+[Liu Group MolCrystalFlow repository](https://github.com/Liu-Group-UF/MolCrystalFlow).
 
-- molecular input is normalized into a shared submission contract before it reaches the API layer
-- job submission is proxied through Next.js API routes so backend tokens stay server-side
-- generated artifacts are loaded from the backend and previewed in the browser
-- pre- and post-optimization geometry/clash screening is reported from backend candidate metadata
-- UMA-s-1p2/OMC energy ranking is displayed when the backend reports it is available
-- Z selectors are populated from backend capabilities, including Z=1 through Z=8 in the current bundle
-- the 3D viewer supports two-atom direct and nearest-periodic-image distance measurements
-- accepted structures can be downloaded individually, by Z, as one combined file, or as an individual-file ZIP
-- the results characteristics panel is resizable on desktop and remembers its width in the browser
+## Features
 
-In a completed result, select **Measure distance**, then click two atom spheres in
-the 3D viewer. The viewer reports both the displayed Cartesian distance and, when
-lattice vectors are available, the nearest-periodic-image distance. Drag the thin
-vertical divider immediately to the left of the characteristics panel to resize it;
-double-click the divider to restore its default width.
+- Upload an XYZ file, paste coordinates, or load the cytosine example.
+- Select Z values (molecules per unit cell) and the number of samples per Z.
+  Available Z values are reported by the connected backend.
+- Follow job status and inspect geometry-screening and energy-ranking results
+  when supplied by the backend.
+- Explore candidates in an interactive 3D viewer and measure Cartesian and
+  nearest-periodic-image distances when lattice vectors are available.
+- Download accepted structures individually, grouped by Z, as a combined XYZ
+  file, or as a ZIP of individual files.
+- Save references to completed runs in the current browser.
 
-## Stack
+Saved runs are browser-local bookmarks. Removing a saved entry does not delete
+the corresponding files from the backend.
 
-- Next.js App Router
-- TypeScript
-- React
-- Tailwind CSS
+## Local development
 
-## Run locally
+Requires Node.js 20.10 or later and npm. Live generation also requires a
+configured, reachable backend with its model dependencies and GPU environment.
+
+Install the frontend dependencies:
 
 ```bash
-npm install
+npm ci
+```
+
+Create `.env.local` in the repository root:
+
+```dotenv
+DESKTOP_BACKEND_URL=http://127.0.0.1:8000
+DESKTOP_BACKEND_TOKEN=replace-with-your-backend-token
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Replace the backend URL with the address reachable from the Next.js server.
+The token must match `MOLFLOW_API_TOKEN` in the backend environment.
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open [localhost:3000](http://localhost:3000). The bundled gallery can be inspected
+without submitting a job; new generation requests require the backend.
 
-The frontend expects `.env.local` to contain:
+## Backend and deployment
 
-```bash
-DESKTOP_BACKEND_URL=https://api.molcrystalflow.org
-DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
-NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
-NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
-NEXT_PUBLIC_SITE_URL=https://www.molcrystalflow.org
-```
+The Next.js API routes forward job submission, status, and artifact requests to
+the FastAPI service. Generation and energy ranking run on the backend, not in
+the browser or the Next.js process.
 
-The public Cloudflare Tunnel hostname is stable, so local development does not
-depend on the lab computer's changing private IP address.
+See the [backend README](backend/docs/molflow-backend/README.md) for the Python
+environment, model configuration, GPU requirements, and startup instructions.
+The [inference-kit notes](csp_inference_kit/README.md) describe conformer
+preprocessing and descriptor assumptions.
 
-## Build
+For a hosted frontend, configure the same environment variables on the hosting
+platform and use a backend URL reachable from that server over HTTPS. Keep
+`DESKTOP_BACKEND_TOKEN` server-side; never give it a `NEXT_PUBLIC_` prefix.
+
+The optional `NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT` and
+`NEXT_PUBLIC_GENERATION_PROMO_CODE` settings control a browser-local counter and
+its unlock code. These values are public client configuration, not credentials
+or enforceable server-side quotas. The backend token authenticates the proxy;
+the application routes do not implement user authentication or per-job ownership
+checks. Deployments must provide appropriate access controls before exposing
+compute or private results to untrusted users.
+
+## Scientific scope
+
+The supplied backend configuration uses CCDC-v2 generation, the lab inference
+kit's seven geometric and two basic descriptors, geometry and periodic-clash
+screening, and UMA-s-1p2 ranking with the OMC task after ten rigid-body
+optimization steps. Actual capabilities depend on the running backend's
+configuration.
+
+Generated structures are candidates for further investigation. Passing automated
+filters or receiving a low model energy does not establish physical stability,
+experimental realizability, or exhaustive crystal-structure prediction.
+
+Current limitations include:
+
+- The inference kit's planarity descriptor is an approximation rather than an
+  exact reproduction of the training descriptor.
+- For Z greater than one, the configured workflow uses the same parity state
+  for each molecular copy; mirrored alternatives are not automatically enumerated.
+- The XYZ interface does not collect charge or spin. The UMA-OMC path uses the
+  backend's neutral, spin-zero convention.
+
+## Reference example
+
+The bundled molecular input is neutral cytosine (`C4H5N3O`, 13 explicit atoms),
+from PubChem CID 597, conformer `0000025500000001`. Coordinates, bonding, and
+provenance are recorded in [data/cytosine-example.json](data/cytosine-example.json).
+
+The static gallery contains precomputed Z=2 candidates that passed
+pre-optimization geometry and clash checks and were ranked by UMA-s-1p2 after
+ten rigid-body optimization steps. Those checks do not guarantee that every
+optimized periodic contact is clash-free.
+
+See [public/demo/README.md](public/demo/README.md) for the reference artifacts.
+
+## Validation and production build
 
 ```bash
 npm run validate:demo
@@ -59,96 +121,24 @@ npm run typecheck
 npm run build
 ```
 
-The bundled example is neutral cytosine (`C4H5N3O`, 13 explicit atoms) from
-PubChem CID 597, conformer `0000025500000001`. The static landing-page gallery
-contains candidates that passed the backend's pre-optimization geometry/clash
-checks and were ranked by UMA-s-1p2 after ten rigid-body optimization steps.
-Passing those automated checks does not establish physical stability or guarantee
-that every optimized periodic contact is clash-free. Run
-`npm run validate:demo` whenever the example input or gallery artifacts change.
+These commands check the bundled reference data, TypeScript types, and production
+compilation. They do not test a live GPU generation run.
 
-## Project structure
+After building, start the production server with `npm start`.
 
-- `app/page.tsx` landing and upload flow
-- `app/processing/page.tsx` staged mock workflow
-- `app/results/[id]/page.tsx` demo result dashboard
-- `app/api/jobs/*` and `app/api/health/route.ts` proxy the lab backend
-- `components/` reusable UI and workflow components
-- `lib/` typed helpers, input normalization, `.xyz` parsing/serialization, backend response normalization, and viewer helpers
-- `data/cytosine-example.json` validated cytosine example and provenance
-- `public/demo/` downloadable demo artifacts
-- `backend/docs/molflow-backend/` server-copyable FastAPI backend bundle
+## Repository layout
 
-## Lab Backend
+| Path | Purpose |
+| --- | --- |
+| `app/page.tsx` | Generation workspace and reference gallery |
+| `app/results/[id]/page.tsx` | Results for a backend job |
+| `app/processing/page.tsx` | Redirect to the job's results page |
+| `app/api/` | Backend health, submission, status, and file proxies |
+| `components/` | Generation controls, result panels, and 3D viewers |
+| `lib/` | Input handling, backend response parsing, XYZ utilities, and measurements |
+| `data/` and `public/demo/` | Cytosine provenance and reference structures |
+| `backend/docs/molflow-backend/` | FastAPI backend source, runtime, and deployment instructions |
+| `csp_inference_kit/` | Lab conformer-preprocessing utilities and documentation |
 
-Backend setup and copy-to-server instructions live in
-`backend/docs/molflow-backend/README.md`.
-
-Daily lab workflow:
-
-```bash
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate molcrystalflow
-cd ~/molflow-backend
-bash start.sh
-```
-
-The packaged backend is configured for UMA-s-1p2 molecular-crystal ranking with
-the OMC task after exactly 10 rigid-body optimization steps through the lab
-`csp-pipeline` implementation. Final optimized coordinates are screened again
-before acceptance. CCDC-v2 inputs use the lab-supplied seven geometric and two
-basic descriptor implementation rather than zero-filled placeholders; the
-supplied planarity formula remains an explicitly documented approximation. The
-frontend does not expose backend tokens to the browser.
-
-## Vercel Deployment
-
-The deployable setup keeps the GPU backend on the Ubuntu lab computer and hosts
-only the Next.js web app on Vercel:
-
-```text
-Browser -> Vercel Next.js app/API routes -> lab Ubuntu MolFlow backend
-```
-
-The lab backend must be reachable from Vercel through a public HTTPS URL,
-university reverse proxy, or approved tunnel. A private campus IP such as
-`http://10.x.x.x:8000` only works from devices on that network and will not be
-reachable by Vercel.
-
-Set these Vercel environment variables:
-
-```bash
-DESKTOP_BACKEND_URL=https://api.molcrystalflow.org
-DESKTOP_BACKEND_TOKEN=<same value as MOLFLOW_API_TOKEN on the lab backend>
-NEXT_PUBLIC_DAILY_FREE_GENERATION_LIMIT=20
-NEXT_PUBLIC_GENERATION_PROMO_CODE=Qetu123!
-NEXT_PUBLIC_SITE_URL=https://www.molcrystalflow.org
-```
-
-Do not prefix `DESKTOP_BACKEND_TOKEN` with `NEXT_PUBLIC_`; it must stay
-server-side in Vercel API routes.
-
-Vercel Web Analytics is initialized once in the root application layout. It
-does not require an additional environment variable; enable Web Analytics for
-the Vercel project and deploy this version to begin collecting page views.
-
-The daily generation limit is intentionally browser-side only. It stores a
-per-browser daily counter in `localStorage`, resets on the next calendar day,
-and unlocks extra generations for that browser when the promo code matches the
-public env value. This is lightweight bot/friction control, not a secure quota.
-
-To keep the backend running during a lab session, use `tmux`:
-
-```bash
-tmux new -s molflow
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate molcrystalflow
-cd ~/molflow-backend
-bash start.sh
-```
-
-Detach without stopping the backend with `Ctrl+B`, then `D`. Reattach later:
-
-```bash
-tmux attach -t molflow
-```
+The web application uses Next.js App Router, React, TypeScript, Tailwind CSS, and
+3Dmol.js.
